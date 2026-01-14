@@ -21,14 +21,24 @@ error: failed to push some refs
 
 #### 📝 Manual Method
 ```bash
-# 1. Pull remote changes
-git pull origin main
+# 1. Pull remote changes (with explicit merge strategy)
+git pull --no-rebase origin main
 
 # 2. If conflicts occur, fix them then:
 git add .
 git commit -m "Resolve merge conflicts"
 
 # 3. Push
+git push origin main
+```
+
+#### ⚙️ If You See "Divergent Branches" Error
+```bash
+# Configure git once (choose merge strategy)
+git config pull.rebase false
+
+# Then pull and push
+git pull origin main
 git push origin main
 ```
 
@@ -47,9 +57,10 @@ git push origin main
 |-----------|---------|-------------|
 | Want to understand the issue | `./diagnose-and-fix.sh` | First time or complex situation |
 | Quick automated fix | `./sync-and-push.sh main` | Trust automation, want speed |
-| Normal sync | `git pull origin main && git push origin main` | Comfortable with git |
+| Normal sync | `git pull --no-rebase origin main && git push origin main` | Comfortable with git |
 | Want clean history | `git pull --rebase origin main` | Team prefers linear history |
 | Solo project | `git push --force-with-lease origin main` | You're the only contributor |
+| Divergent branches error | `git config pull.rebase false` then pull/push | One-time git configuration |
 
 ### Prevention
 

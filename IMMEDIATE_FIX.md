@@ -6,15 +6,21 @@
 error: failed to push some refs
 ```
 
-## Fix It Right Now (2 Steps)
+## Fix It Right Now
 
-### Step 1: Run this on your workstation
+### If you see "divergent branches" error:
 ```bash
+# Configure git to use merge strategy (one-time setup)
+git config pull.rebase false
+
+# Now pull and push
 git pull origin main
+git push origin main
 ```
 
-### Step 2: Run this
+### Or use explicit merge in one command:
 ```bash
+git pull --no-rebase origin main
 git push origin main
 ```
 
@@ -69,7 +75,7 @@ If you have the helper tools:
 
 If you don't:
 ```bash
-git pull origin main && git push origin main
+git pull --no-rebase origin main && git push origin main
 ```
 
 ## Prevent This

@@ -64,7 +64,7 @@ elif [ "$LOCAL" = "$BASE" ]; then
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     echo "1️⃣  PULL THEN PUSH (Recommended):"
-    echo "   git pull $REMOTE $BRANCH"
+    echo "   git pull --no-rebase $REMOTE $BRANCH"
     echo "   git push $REMOTE $BRANCH"
     echo ""
     echo "2️⃣  USE OUR AUTOMATED SCRIPT:"
@@ -79,7 +79,7 @@ elif [ "$LOCAL" = "$BASE" ]; then
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo ""
         echo "🔄 Pulling changes from remote..."
-        if git pull "$REMOTE" "$BRANCH"; then
+        if git pull --no-rebase "$REMOTE" "$BRANCH"; then
             echo "✅ Pull successful!"
             echo ""
             echo "📤 Now pushing to remote..."
@@ -135,7 +135,7 @@ else
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     echo "1️⃣  MERGE (keeps both histories):"
-    echo "   git pull $REMOTE $BRANCH"
+    echo "   git pull --no-rebase $REMOTE $BRANCH"
     echo "   # Resolve conflicts if any"
     echo "   git push $REMOTE $BRANCH"
     echo ""
@@ -152,7 +152,7 @@ else
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo ""
         echo "🔄 Pulling and merging changes..."
-        if git pull "$REMOTE" "$BRANCH"; then
+        if git pull --no-rebase "$REMOTE" "$BRANCH"; then
             echo "✅ Merge successful!"
             echo ""
             echo "📤 Now pushing to remote..."

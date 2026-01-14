@@ -100,7 +100,7 @@ if [ "$LOCAL" = "$REMOTE_REF" ]; then
 elif [ "$LOCAL" = "$BASE" ]; then
     echo "⬇️  Your branch is behind $REMOTE/$BRANCH"
     echo "📥 Pulling changes..."
-    git pull "$REMOTE" "$BRANCH" || exit 1
+    git pull --no-rebase "$REMOTE" "$BRANCH" || exit 1
     echo "📤 Pushing to remote..."
     git push "$REMOTE" "$BRANCH"
 elif [ "$REMOTE_REF" = "$BASE" ]; then
@@ -109,7 +109,7 @@ elif [ "$REMOTE_REF" = "$BASE" ]; then
     git push "$REMOTE" "$BRANCH"
 else
     echo "🔀 Branches have diverged. Pulling with merge strategy..."
-    git pull "$REMOTE" "$BRANCH" || {
+    git pull --no-rebase "$REMOTE" "$BRANCH" || {
         echo "❌ Merge conflicts detected. Please resolve them manually:"
         echo "   1. Fix conflicts in the listed files"
         echo "   2. Run: git add ."

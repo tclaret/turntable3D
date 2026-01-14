@@ -7,6 +7,11 @@ Simulate scratching vinyl on a 3D turntable.
 
 **Quick fix:**
 ```bash
+# If you see "divergent branches" error, use:
+git pull --no-rebase origin main && git push origin main
+
+# Or configure git once:
+git config pull.rebase false
 git pull origin main && git push origin main
 ```
 
@@ -49,8 +54,8 @@ If you encounter a "non-fast-forward" error when pushing:
 # Option 2: Use the automated sync script
 ./sync-and-push.sh main
 
-# Option 3: Manual sync
-git pull origin main
+# Option 3: Manual sync (with explicit merge strategy)
+git pull --no-rebase origin main
 git push origin main
 ```
 

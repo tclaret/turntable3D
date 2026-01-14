@@ -11,14 +11,31 @@ hint: its remote counterpart.
 
 This means your local `main` branch is behind the remote `main` branch.
 
+## Divergent Branches Error (Git 2.27+)
+
+If you see this error when running `git pull`:
+```
+hint: You have divergent branches and need to specify how to reconcile them.
+hint: You can do so by running one of the following commands:
+hint:   git config pull.rebase false  # merge
+hint:   git config pull.rebase true   # rebase
+hint:   git config pull.ff only       # fast-forward only
+fatal: Need to specify how to reconcile divergent branches.
+```
+
+**Quick fix**: Use `git pull --no-rebase` to explicitly use merge strategy, or configure git once:
+```bash
+git config pull.rebase false  # Use merge strategy by default
+```
+
 ## Solution Options
 
 ### Option 1: Pull and Merge (Recommended)
 This integrates remote changes with your local changes:
 
 ```bash
-# Pull the latest changes from remote
-git pull origin main
+# Pull the latest changes from remote (explicit merge strategy)
+git pull --no-rebase origin main
 
 # If there are merge conflicts, resolve them, then:
 git add .
@@ -58,14 +75,18 @@ git push --force origin main
 
 1. **Check status**: `git status`
 2. **See what's different**: `git fetch origin && git log HEAD..origin/main`
-3. **Pull changes**: `git pull origin main`
+3. **Pull changes**: `git pull --no-rebase origin main`
 4. **Resolve any conflicts** if they occur
 5. **Push**: `git push origin main`
 
 ## Quick Commands
 
 ```bash
-# One-liner to pull and push
+# One-liner to pull and push (with explicit merge)
+git pull --no-rebase origin main && git push origin main
+
+# Or configure git once to use merge by default
+git config pull.rebase false
 git pull origin main && git push origin main
 
 # To see what's on remote that you don't have
