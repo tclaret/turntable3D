@@ -1934,7 +1934,7 @@
             // === SYSTÈME AUDIO AVEC TONE.JS ===
             // Initialiser Tone.js
             let tonePlayer = null;
-            let tonePitchShift = null;
+
             let toneInitialized = false;
 
             async function initToneJS() {
@@ -1943,15 +1943,10 @@
                     console.log('🎵 Tone.js démarré avec succès');
 
                     // Créer le pitch shift effect avec paramètres optimisés
-                    tonePitchShift = new Tone.PitchShift({
-                        pitch: 0, // En demi-tons
-                        windowSize: 0.03, // Petite fenêtre pour faible latence (30ms)
-                        delayTime: 0,
-                        feedback: 0
-                    }).toDestination();
+
 
                     toneInitialized = true;
-                    console.log('✅ Tone.js pitch shift initialisé');
+                    console.log('✅ Tone.js initialisé');
                     return true;
                 } catch (error) {
                     console.error('❌ Erreur initialisation Tone.js:', error);
@@ -2006,8 +2001,8 @@
                                 this.duration = tonePlayer.buffer.duration;
                                 console.log('✅ Audio chargé avec Tone.js:', this.duration, 'secondes');
 
-                                // Connecter au pitch shift
-                                tonePlayer.connect(tonePitchShift);
+                                // Connecter directement à lab sortie
+                                tonePlayer.toDestination();
                             }
                         });
 
@@ -2045,18 +2040,6 @@
                     // Limiter la position
                     this.currentPlaybackPosition = Math.max(0, Math.min(this.duration, newPosition));
 
-                    // Détection du sens : velocity < 0 = rotation counter-clockwise (arrière)
-                    // Seuil très bas pour éviter de basculer trop vite, mais s'assurer qu'on reste en arrière tant que vitesse négative
-                    const isBackward = velocity < -0.0001;
-                    const absVelocity = Math.abs(velocity);
-
-                    // Calculer le pitch shift basé sur la vélocité absolue - Gamme étendue pour effet plus extrême
-                    const pitchSemitones = Math.max(-24, Math.min(24, absVelocity * 12));
-
-                    if (tonePitchShift) {
-                        tonePitchShift.pitch = pitchSemitones;
-                    }
-
                     // Jouer un grain court à la position actuelle
                     if (tonePlayer) {
                         // Utiliser seek + start/stop pour un grain
@@ -2067,13 +2050,17 @@
 
                             const grainDuration = 0.05; // 50ms
 
-                            // CONTRÔLE DE LA DIRECTION avec player.reverse (comme sur le site de référence)
-                            tonePlayer.reverse = isBackward;
+                            // S'assurer que le mode reverse est désactivé pour utiliser les taux négatifs
+                            if (tonePlayer.reverse) {
+                                tonePlayer.reverse = false;
+                            }
 
-                            // Appliquer un playbackRate basé sur la vitesse (toujours positif)
-                            // Gamme étendue: 0.0 (arrêt complet) à 4.0 (rapide)
-                            // On autorise la vitesse 0 pour que l'audio "colle" vraiment au mouvement (stick)
-                            tonePlayer.playbackRate = Math.max(0, Math.min(4.0, absVelocity * 2));
+                            // Appliquer un playbackRate basé sur la vitesse (signé pour la direction)
+                            // Gamme étendue: -20.0 à +20.0 pour permettre les "backspins" rapides
+                            // Multiplicateur *2 pour accentuer l'effet de pitch comme demandé
+                            const rate = Math.max(-20.0, Math.min(20.0, velocity * 2));
+
+                            tonePlayer.playbackRate = rate;
 
                             // Jouer le grain
                             tonePlayer.start('+0', this.currentPlaybackPosition, grainDuration);
@@ -2096,10 +2083,7 @@
 
                     this.isScratching = false;
 
-                    // Réinitialiser le pitch
-                    if (tonePitchShift) {
-                        tonePitchShift.pitch = 0;
-                    }
+
 
                     // Ne pas redémarrer automatiquement ici - c'est géré dans mouseup/touchend
 
@@ -2366,7 +2350,7 @@
                         let newTime = anchorAudioTime + timeShift;
 
                         // Clamper le temps
-                        newTime = Math.max(0, Math.min(audioScratcher.audioBuffer.duration, newTime));
+                        newTime = Math.max(0, Math.min(audioScratcher.duration, newTime));
 
                         // Calcul vélocité normalisée pour le pitch
                         const velocityNormalized = scratchVelocity / 6;
