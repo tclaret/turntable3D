@@ -1,0 +1,2831 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turntable3D - Bras Suivant le Sillon (Responsif)</title>
+    <style>
+        /* ------------------------------------ */
+        /* 0. VARIABLES CSS GLOBALES            */
+        /* ------------------------------------ */
+        :root {
+            --color-primary: #c0392b;
+            /* Rouge (Active/Accent) */
+            --color-base: #555;
+            /* Gris foncé (Base platine) */
+            --color-control: #333;
+            /* Noir (Contrôles) */
+            --pitch-slider-color: #2c3e50;
+            --speed-33-duration: 3.00s;
+            /* Durée d'une rotation à 33 RPM */
+            --debug-mode: 0;
+            /* 0 = désactivé, 1 = activé */
+        }
+
+        /* ------------------------------------ */
+        /* 1. CSS Général & Contrôles           */
+        /* ------------------------------------ */
+        body {
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding-top: 100px;
+            /* Espace pour les contrôles fixes */
+            overflow-x: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        .interface-controls {
+            width: 100%;
+            background-color: var(--color-control);
+            color: white;
+            padding: 10px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            z-index: 100;
+        }
+
+        .controls-line {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            padding: 5px 0;
+        }
+
+        .control-btn {
+            cursor: pointer;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            background-color: #777;
+            color: white;
+            transition: background-color 0.2s;
+        }
+
+        .control-btn.active {
+            background-color: var(--color-primary);
+        }
+
+        .control-btn:hover {
+            background-color: #999;
+        }
+
+        .pitch-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #ccc;
+        }
+
+        .pitch-group label {
+            font-size: 14px;
+        }
+
+        .pitch-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100px;
+            height: 10px;
+            background: #999;
+            outline: none;
+            border-radius: 5px;
+            padding: 0;
+        }
+
+        .pitch-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--pitch-slider-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* ------------------------------------ */
+        /* 2. Scène 3D & Platine (Vue 90°)      */
+        /* ------------------------------------ */
+        .scene {
+            perspective: 1500px;
+            width: 90vmin;
+            height: 60vmin;
+            max-width: 900px;
+            max-height: 600px;
+            position: relative;
+            margin: 120px auto 20px;
+            transform-style: preserve-3d;
+        }
+
+        .scene-inner {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transform: rotateX(45deg) rotateZ(-10deg);
+            transform-style: preserve-3d;
+            transform-origin: center center;
+        }
+
+        .scene-base {
+            width: 80vmin;
+            height: 70vmin;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-style: preserve-3d;
+            transform: translate(-50%, -50%) translateZ(0);
+        }
+
+        /* Face supérieure du socle */
+        .scene-base-top {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            background: linear-gradient(135deg, #666 0%, #555 50%, #444 100%);
+            border: 2px solid #333;
+            border-radius: 3vmin;
+            transform: translateZ(6vmin);
+            box-shadow: inset 0 2px 5px rgba(255, 255, 255, 0.1);
+        }
+
+        /* Face avant du socle */
+        .scene-base-front {
+            width: 80vmin;
+            height: 10vmin;
+            position: absolute;
+            background: linear-gradient(180deg, #555 0%, #3a3a3a 50%, #2a2a2a 100%);
+            border: 2px solid #222;
+            border-radius: 0 0 2vmin 2vmin;
+            transform: translateY(70vmin) translateZ(-5vmin) rotateX(90deg);
+            transform-origin: top center;
+        }
+
+        /* Face arrière du socle */
+        .scene-base-back {
+            width: 80vmin;
+            height: 10vmin;
+            position: absolute;
+            background: linear-gradient(180deg, #444 0%, #333 50%, #222 100%);
+            border: 2px solid #1a1a1a;
+            border-radius: 0 0 2vmin 2vmin;
+            transform: translateY(-10vmin) translateZ(-5vmin) rotateX(-90deg);
+            transform-origin: bottom center;
+        }
+
+        /* Côté gauche du socle */
+        .scene-base-left {
+            width: 10vmin;
+            height: 70vmin;
+            position: absolute;
+            background: linear-gradient(180deg, #4a4a4a 0%, #353535 50%, #252525 100%);
+            border: 2px solid #1a1a1a;
+            border-radius: 0 0 2vmin 2vmin;
+            transform: translateX(-5vmin) translateY(0) translateZ(0) rotateY(90deg);
+            transform-origin: center center;
+        }
+
+        /* Côté droit du socle */
+        .scene-base-right {
+            width: 10vmin;
+            height: 70vmin;
+            position: absolute;
+            background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 50%, #1a1a1a 100%);
+            border: 2px solid #111;
+            border-radius: 0 0 2vmin 2vmin;
+            transform: translateX(75vmin) translateY(0) translateZ(0) rotateY(-90deg);
+            transform-origin: center center;
+        }
+
+        /* Pieds du socle */
+        .scene-base-foot {
+            width: 6vmin;
+            height: 6vmin;
+            position: absolute;
+            background: radial-gradient(circle at 40% 40%, #555, #333, #1a1a1a);
+            border-radius: 50%;
+            border: 0.3vmin solid #222;
+            box-shadow:
+                0 0.5vmin 1vmin rgba(0, 0, 0, 0.5),
+                inset 0.2vmin 0.2vmin 0.5vmin rgba(255, 255, 255, 0.2),
+                inset -0.2vmin -0.2vmin 0.5vmin rgba(0, 0, 0, 0.5);
+            transform: translateZ(-10vmin);
+            transform-style: preserve-3d;
+        }
+
+        /* Face inférieure du pied (dessous) */
+        .scene-base-foot::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 60% 60%, #2a2a2a, #1a1a1a, #0a0a0a);
+            border-radius: 50%;
+            border: 0.2vmin solid #111;
+            transform: translateZ(-2vmin);
+            box-shadow: 0 0 0.5vmin rgba(0, 0, 0, 0.8);
+        }
+
+        /* Côté cylindrique du pied */
+        .scene-base-foot::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 2vmin;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateZ(-1vmin);
+            background: linear-gradient(180deg,
+                    #444 0%,
+                    #333 20%,
+                    #2a2a2a 50%,
+                    #222 80%,
+                    #1a1a1a 100%);
+            border-radius: 2vmin / 1vmin;
+            border-left: 0.2vmin solid #1a1a1a;
+            border-right: 0.2vmin solid #1a1a1a;
+            opacity: 0.9;
+        }
+
+        .scene-base-foot1 {
+            left: 4vmin;
+            top: 4vmin;
+        }
+
+        .scene-base-foot2 {
+            right: 4vmin;
+            top: 4vmin;
+        }
+
+        .scene-base-foot3 {
+            left: 4vmin;
+            bottom: 4vmin;
+        }
+
+        .scene-base-foot4 {
+            right: 4vmin;
+            bottom: 4vmin;
+        }
+
+        /* Couleurs distinctes en mode debug */
+        .scene.debug .scene-base-top {
+            background: linear-gradient(135deg, rgba(255, 0, 0, 0.5) 0%, rgba(255, 0, 0, 0.3) 100%);
+        }
+
+        .scene.debug .scene-base-front {
+            background: linear-gradient(180deg, rgba(0, 255, 0, 0.5) 0%, rgba(0, 255, 0, 0.3) 100%);
+        }
+
+        .scene.debug .scene-base-back {
+            background: linear-gradient(180deg, rgba(0, 0, 255, 0.5) 0%, rgba(0, 0, 255, 0.3) 100%);
+        }
+
+        .scene.debug .scene-base-left {
+            background: linear-gradient(180deg, rgba(255, 255, 0, 0.5) 0%, rgba(255, 255, 0, 0.3) 100%);
+        }
+
+        .scene.debug .scene-base-right {
+            background: linear-gradient(180deg, rgba(255, 0, 255, 0.5) 0%, rgba(255, 0, 255, 0.3) 100%);
+        }
+
+        /* ------------------------------------ */
+        /* Repères de débogage 3D               */
+        /* ------------------------------------ */
+        .debug-controls {
+            position: fixed;
+            top: 150px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .scene.debug .debug-controls {
+            display: block;
+        }
+
+        .debug-axis {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-style: preserve-3d;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .scene.debug .debug-axis {
+            opacity: 1;
+        }
+
+        .axis-x,
+        .axis-y,
+        .axis-z {
+            position: absolute;
+            width: 60vmin;
+            height: 3px;
+            transform-origin: 0 0;
+        }
+
+        .axis-x {
+            background: red;
+            transform: translateX(0);
+        }
+
+        .axis-x::after {
+            content: 'X';
+            position: absolute;
+            right: -20px;
+            top: -10px;
+            color: red;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .axis-y {
+            background: green;
+            transform: rotateZ(90deg);
+        }
+
+        .axis-y::after {
+            content: 'Y';
+            position: absolute;
+            right: -20px;
+            top: -10px;
+            color: green;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .axis-z {
+            background: blue;
+            transform: rotateY(90deg);
+        }
+
+        .axis-z::after {
+            content: 'Z';
+            position: absolute;
+            right: -20px;
+            top: -10px;
+            color: blue;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        /* Boîtes de délimitation pour debug */
+        .debug-box {
+            position: absolute;
+            border: 2px dashed;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .scene.debug .debug-box {
+            opacity: 0.6;
+        }
+
+        .debug-box-base {
+            width: 100%;
+            height: 100%;
+            border-color: yellow;
+            top: 0;
+            left: 0;
+        }
+
+        .debug-box-record {
+            width: 65vmin;
+            height: 65vmin;
+            border-color: cyan;
+            top: 55%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .debug-box-arm {
+            width: 30vmin;
+            height: 30vmin;
+            border-color: magenta;
+            top: 55%;
+            left: 30%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Lignes de debug pour le bras */
+        .debug-arm-line {
+            position: absolute;
+            height: 2px;
+            background: magenta;
+            transform-origin: 0 50%;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .scene.debug .debug-arm-line {
+            opacity: 0.8;
+        }
+
+        .debug-arm-pivot {
+            position: absolute;
+            width: 4vmin;
+            height: 4vmin;
+            border: 2px solid magenta;
+            border-radius: 50%;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            transform: translate(-50%, -50%);
+        }
+
+        .scene.debug .debug-arm-pivot {
+            opacity: 0.8;
+        }
+
+        .debug-arm-center {
+            position: absolute;
+            width: 2vmin;
+            height: 2vmin;
+            background: cyan;
+            border-radius: 50%;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            transform: translate(-50%, -50%);
+        }
+
+        .scene.debug .debug-arm-center {
+            opacity: 0.8;
+        }
+
+        .debug-arm-label {
+            position: absolute;
+            background: rgba(255, 0, 255, 0.8);
+            color: white;
+            padding: 2px 5px;
+            font-size: 10px;
+            border-radius: 3px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 101;
+        }
+
+        .scene.debug .debug-arm-label {
+            opacity: 1;
+        }
+
+        /* Marqueurs de position du bras sur le disque */
+        .arm-position-marker {
+            position: absolute;
+            width: 3vmin;
+            height: 3vmin;
+            border-radius: 50%;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 12;
+            transform: translate(-50%, -50%);
+            border: 2px solid;
+        }
+
+        .scene.debug .arm-position-marker {
+            opacity: 0.8;
+        }
+
+        .arm-position-start {
+            border-color: #00ff00;
+            background: radial-gradient(circle, rgba(0, 255, 0, 0.3), transparent);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+        }
+
+        .arm-position-end {
+            border-color: #ff0000;
+            background: radial-gradient(circle, rgba(255, 0, 0, 0.3), transparent);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+        }
+
+        .arm-position-label {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 2px 6px;
+            font-size: 11px;
+            border-radius: 3px;
+            white-space: nowrap;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Grille de référence */
+        /* Grille XZ (plan horizontal) */
+        .debug-grid-xz {
+            position: absolute;
+            width: 100vmin;
+            height: 100vmin;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateZ(0) rotateX(90deg);
+            transform-style: preserve-3d;
+            opacity: 0;
+            pointer-events: none;
+            background-image:
+                repeating-linear-gradient(0deg, rgba(0, 150, 180, 0.7) 0px, transparent 1px, transparent 10vmin, rgba(0, 150, 180, 0.7) calc(10vmin + 1px)),
+                repeating-linear-gradient(90deg, rgba(0, 150, 180, 0.7) 0px, transparent 1px, transparent 10vmin, rgba(0, 150, 180, 0.7) calc(10vmin + 1px));
+            border: 2px solid rgba(0, 150, 180, 0.9);
+        }
+
+        /* Grille YZ (plan vertical latéral) */
+        .debug-grid-yz {
+            position: absolute;
+            width: 100vmin;
+            height: 100vmin;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateX(-50vmin) rotateY(90deg);
+            transform-style: preserve-3d;
+            opacity: 0;
+            pointer-events: none;
+            background-image:
+                repeating-linear-gradient(0deg, rgba(150, 0, 150, 0.7) 0px, transparent 1px, transparent 10vmin, rgba(150, 0, 150, 0.7) calc(10vmin + 1px)),
+                repeating-linear-gradient(90deg, rgba(150, 0, 150, 0.7) 0px, transparent 1px, transparent 10vmin, rgba(150, 0, 150, 0.7) calc(10vmin + 1px));
+            border: 2px solid rgba(150, 0, 150, 0.9);
+        }
+
+        /* Grille XY (plan vertical frontal) */
+        .debug-grid-xy {
+            position: absolute;
+            width: 100vmin;
+            height: 100vmin;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateZ(-50vmin);
+            transform-style: preserve-3d;
+            opacity: 0;
+            pointer-events: none;
+            background-image:
+                repeating-linear-gradient(0deg, rgba(200, 100, 0, 0.7) 0px, transparent 1px, transparent 10vmin, rgba(200, 100, 0, 0.7) calc(10vmin + 1px)),
+                repeating-linear-gradient(90deg, rgba(200, 100, 0, 0.7) 0px, transparent 1px, transparent 10vmin, rgba(200, 100, 0, 0.7) calc(10vmin + 1px));
+            border: 2px solid rgba(200, 100, 0, 0.9);
+        }
+
+        .scene.debug .debug-grid-xz,
+        .scene.debug .debug-grid-yz,
+        .scene.debug .debug-grid-xy {
+            opacity: 1;
+        }
+
+        /* Labels pour les grilles */
+        .grid-label {
+            position: absolute;
+            font-size: 2vmin;
+            font-weight: bold;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 0.3vmin 0.6vmin;
+            border-radius: 0.3vmin;
+            pointer-events: none;
+            opacity: 0;
+            text-shadow: 0 0 3px black;
+        }
+
+        .scene.debug .grid-label {
+            opacity: 1;
+        }
+
+        /* Labels pour la grille XZ (plan horizontal) */
+        .grid-label-xz {
+            transform: rotateX(-90deg) translateZ(0.5vmin);
+        }
+
+        /* Labels pour la grille YZ (plan vertical latéral) */
+        .grid-label-yz {
+            transform: rotateY(-90deg) translateZ(0.5vmin);
+        }
+
+        /* Labels pour la grille XY (plan vertical frontal) */
+        .grid-label-xy {
+            transform: translateZ(0.5vmin);
+        }
+
+        /* Labels d'axes (noms des axes) */
+        .axis-name {
+            position: absolute;
+            font-size: 3vmin;
+            font-weight: bold;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 0.5vmin 1vmin;
+            border-radius: 0.5vmin;
+            pointer-events: none;
+            opacity: 0;
+            text-shadow: 0 0 5px black;
+        }
+
+        .scene.debug .axis-name {
+            opacity: 1;
+        }
+
+        /* Croix rouge de marquage de position */
+        .position-marker {
+            position: absolute;
+            width: 4vmin;
+            height: 4vmin;
+            opacity: 0;
+            pointer-events: none;
+            transform-style: preserve-3d;
+        }
+
+        .scene.debug .position-marker {
+            opacity: 1;
+        }
+
+        .position-marker::before,
+        .position-marker::after {
+            content: '';
+            position: absolute;
+            background-color: red;
+            top: 50%;
+            left: 50%;
+        }
+
+        .position-marker::before {
+            width: 100%;
+            height: 0.5vmin;
+            transform: translate(-50%, -50%);
+        }
+
+        .position-marker::after {
+            width: 0.5vmin;
+            height: 100%;
+            transform: translate(-50%, -50%);
+        }
+
+        .position-marker-blue::before,
+        .position-marker-blue::after {
+            background-color: blue;
+        }
+
+        .turntable-base {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateZ(2vmin);
+            transform-origin: center center;
+            transform-style: preserve-3d;
+            z-index: 15;
+        }
+
+        /* ------------------------------------ */
+        /* 3. SÉLECTEUR DE VITESSE (Compensation) */
+        /* ------------------------------------ */
+        .speed-selector-container {
+            position: absolute;
+            left: 50%;
+            top: 3%;
+            transform: translateX(-50%) translateX(-34vmin) translateY(50vmin) translateZ(5vmin) rotateZ(345deg);
+            transform-style: preserve-3d;
+            z-index: 10;
+            cursor: pointer;
+        }
+
+        .selector-label {
+            position: absolute;
+            top: -2vmin;
+            left: 50%;
+            transform: translateX(calc(-50% + 2vmin)) rotateZ(15deg);
+            font-size: 1.3vmin;
+            font-weight: bold;
+            color: #000;
+            white-space: nowrap;
+            text-shadow: 0 0 3px rgba(255, 255, 255, 0.5);
+            transform-origin: center center;
+        }
+
+        .selector-base {
+            width: 5vmin;
+            height: 9vmin;
+            background-image: url('https://tclaret.github.io/turntable/img/ChickenHead.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 50%;
+            position: relative;
+            box-shadow:
+                0 0.5vmin 1vmin rgba(0, 0, 0, 0.4),
+                0 1vmin 2vmin rgba(0, 0, 0, 0.3),
+                inset 0.3vmin 0.3vmin 0.8vmin rgba(255, 255, 255, 0.3),
+                inset -0.3vmin -0.3vmin 0.8vmin rgba(0, 0, 0, 0.4),
+                0 0 2vmin 0.5vmin rgba(0, 255, 0, 0.6);
+            transition: transform 0.3s ease-in-out;
+            transform-style: preserve-3d;
+            filter: drop-shadow(0 0.8vmin 1.5vmin rgba(0, 0, 0, 0.5));
+        }
+
+        .selector-base::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.4) 0%,
+                    transparent 40%,
+                    transparent 60%,
+                    rgba(0, 0, 0, 0.3) 100%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .selector-base::after {
+            content: '';
+            position: absolute;
+            top: -0.5vmin;
+            left: -0.5vmin;
+            width: calc(100% + 1vmin);
+            height: calc(100% + 1vmin);
+            background: radial-gradient(circle at 30% 30%,
+                    rgba(255, 255, 255, 0.15) 0%,
+                    transparent 50%);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translateZ(0.5vmin);
+        }
+
+        .selector-knob {
+            width: 4vw;
+            height: 4vw;
+            background-color: transparent;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .selector-knob::before {
+            content: '';
+            position: absolute;
+            width: 1.8vw;
+            height: 0.6vw;
+            background-color: var(--color-primary);
+            top: 0.5vw;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 1px;
+        }
+
+        /* ------------------------------------ */
+        /* Pitch Control à droite               */
+        /* ------------------------------------ */
+        .pitch-control-container {
+            position: absolute;
+            left: 50%;
+            top: 1%;
+            transform: translateX(-50%) translateX(34vmin) translateY(40vmin) translateZ(5vmin);
+            transform-style: preserve-3d;
+            z-index: 10;
+        }
+
+        .pitch-control-base {
+            width: 2vmin;
+            height: 18vmin;
+            background-color: #333;
+            border-radius: 1vmin;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5) inset, 0 0 20px 5px rgba(255, 0, 0, 0.8);
+            border: 0.3vmin solid #555;
+        }
+
+        .pitch-control-knob {
+            width: 2.5vw;
+            height: 2vw;
+            background-color: var(--pitch-slider-color);
+            border-radius: 0.5vw;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
+            cursor: pointer;
+            border: 0.2vw solid #444;
+            transition: top 0.2s ease;
+        }
+
+        .pitch-control-knob::before {
+            content: '';
+            position: absolute;
+            width: 1vw;
+            height: 0.3vw;
+            background-color: white;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 1px;
+        }
+
+        /* ------------------------------------ */
+        /* 4. BRAS DE LECTURE (Positionnement corrigé) */
+        /* ------------------------------------ */
+        .tonearm-container {
+            position: absolute;
+            left: calc(50% + 30vmin);
+            /* X=3 */
+            top: calc(50% - 10vmin);
+            /* Y=-1 */
+            z-index: 50;
+
+            transform: translate(-50%, -50%) translateZ(0vmin);
+            /* Z=0 */
+            transform-style: preserve-3d;
+            transition: transform 0.6s ease-in-out;
+
+            width: 4vmin;
+            height: 4vmin;
+            background: radial-gradient(circle at 35% 35%, #555, #3a3a3a, #222, #111);
+            border-radius: 50%;
+            border: 0.4vmin solid #1a1a1a;
+            box-shadow:
+                0 0.5vmin 1vmin rgba(0, 0, 0, 0.6),
+                inset 0.3vmin 0.3vmin 0.6vmin rgba(255, 255, 255, 0.3),
+                inset -0.3vmin -0.3vmin 0.6vmin rgba(0, 0, 0, 0.5);
+
+            transform-origin: center center;
+            pointer-events: none;
+        }
+
+        /* Contrepoids à l'arrière du pivot */
+        .tonearm-counterweight {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 2vmin;
+            height: 8vmin;
+            transform: translate(-50%, -50%) translateX(4vmin) translateZ(8vmin) rotateZ(180deg);
+            transform-style: preserve-3d;
+            background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 30%, #1a1a1a 50%, #2a2a2a 70%, #3a3a3a 100%);
+            border-radius: 1vmin;
+            box-shadow:
+                0 0.5vmin 1vmin rgba(0, 0, 0, 0.5),
+                inset 0.3vmin 0 0.5vmin rgba(255, 255, 255, 0.2),
+                inset -0.3vmin 0 0.5vmin rgba(0, 0, 0, 0.4);
+            border: 0.2vmin solid #111;
+        }
+
+        /* Extrémités du contrepoids */
+        .tonearm-counterweight::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: linear-gradient(90deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.1) 50%,
+                    transparent 100%);
+            border-radius: 1vmin;
+        }
+
+        .tonearm-counterweight::after {
+            content: '';
+            position: absolute;
+            width: 2.5vmin;
+            height: 2.5vmin;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle at 40% 40%, #4a4a4a, #2a2a2a, #1a1a1a);
+            border-radius: 50%;
+            border: 0.2vmin solid #0a0a0a;
+            box-shadow:
+                inset 0.2vmin 0.2vmin 0.4vmin rgba(255, 255, 255, 0.2),
+                0 0.3vmin 0.6vmin rgba(0, 0, 0, 0.5);
+        }
+
+        .tonearm-image {
+            width: 28vmin;
+            height: 6vmin;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: 0% 50%;
+            transform: translate(-6%, -50%) translateZ(8vmin) rotateZ(180deg);
+            transform-style: preserve-3d;
+        }
+
+        /* SVG du bras avec courbe de Bézier */
+        .tonearm-image svg,
+        .tonearm-image img {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Ancien style pour ::before supprimé */
+
+        /* Levier de levée du bras */
+        .tonearm-lift {
+            position: absolute;
+            left: 18vmin;
+            top: calc(50% - 5vmin);
+            transform: translateY(-50%);
+            width: 1vmin;
+            height: 4vmin;
+            background: linear-gradient(90deg, #888, #666, #444);
+            border-radius: 0.5vmin;
+            box-shadow:
+                0 0.2vmin 0.4vmin rgba(0, 0, 0, 0.4),
+                inset 0.1vmin 0 0.2vmin rgba(255, 255, 255, 0.3);
+        }
+
+        .tonearm-lift::before {
+            content: '';
+            position: absolute;
+            top: -1vmin;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1.5vmin;
+            height: 1.5vmin;
+            background: radial-gradient(circle at 40% 40%, #999, #666, #444);
+            border-radius: 50%;
+            border: 0.15vmin solid #333;
+            box-shadow:
+                0 0.2vmin 0.4vmin rgba(0, 0, 0, 0.4),
+                inset 0.1vmin 0.1vmin 0.3vmin rgba(255, 255, 255, 0.3);
+        }
+
+        /* Levier de levée fixe sur le côté droit */
+        .tonearm-lift-fixed {
+            position: absolute;
+            left: 50%;
+            top: 3%;
+            transform: translateX(-50%) translateX(28vmin) translateY(50vmin) translateZ(5vmin);
+            transform-style: preserve-3d;
+            width: 1.5vmin;
+            height: 5vmin;
+            background: linear-gradient(90deg, #888, #666, #444);
+            border-radius: 0.75vmin;
+            box-shadow:
+                0 0.3vmin 0.6vmin rgba(0, 0, 0, 0.4),
+                inset 0.15vmin 0 0.3vmin rgba(255, 255, 255, 0.3);
+            z-index: 10;
+        }
+
+        .tonearm-lift-fixed::before {
+            content: '';
+            position: absolute;
+            top: -1.2vmin;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2vmin;
+            height: 2vmin;
+            background: radial-gradient(circle at 40% 40%, #999, #666, #444);
+            border-radius: 50%;
+            border: 0.2vmin solid #333;
+            box-shadow:
+                0 0.3vmin 0.5vmin rgba(0, 0, 0, 0.4),
+                inset 0.15vmin 0.15vmin 0.4vmin rgba(255, 255, 255, 0.3);
+        }
+
+        .tonearm-lift-fixed::after {
+            content: '';
+            position: absolute;
+            bottom: -0.5vmin;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2.5vmin;
+            height: 1vmin;
+            background: linear-gradient(180deg, #555, #333);
+            border-radius: 0.5vmin;
+            box-shadow: 0 0.2vmin 0.4vmin rgba(0, 0, 0, 0.5);
+        }
+
+        /* Ancien style supprimé */
+
+        /* Tête de lecture au bout du bras */
+
+        /* Tête de lecture au bout du bras */
+        .tonearm-headshell {
+            position: absolute;
+            right: -1vmin;
+            top: 50%;
+            transform: translateY(-50%) rotateZ(25deg);
+            transform-origin: left center;
+            width: 3.5vmin;
+            height: 2.5vmin;
+            background: linear-gradient(135deg, #e0e0e0 0%, #c0c0c0 50%, #a0a0a0 100%);
+            border-radius: 0.5vmin 1.5vmin 1.5vmin 0.5vmin;
+            border: 0.2vmin solid #888;
+            box-shadow:
+                0 0.3vmin 0.8vmin rgba(0, 0, 0, 0.4),
+                inset 0.2vmin 0.2vmin 0.4vmin rgba(255, 255, 255, 0.4),
+                inset -0.2vmin -0.2vmin 0.4vmin rgba(0, 0, 0, 0.3);
+            transform-style: preserve-3d;
+        }
+
+        /* Aiguille de la tête de lecture */
+        .tonearm-headshell::before {
+            content: '';
+            position: absolute;
+            right: -0.5vmin;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0.8vmin;
+            height: 0.1vmin;
+            background: linear-gradient(90deg, #666, #999, #ccc);
+            border-radius: 0 0.05vmin 0.05vmin 0;
+            box-shadow: 0 0.1vmin 0.2vmin rgba(0, 0, 0, 0.5);
+        }
+
+        /* Cartouche sur la tête */
+        .tonearm-headshell::after {
+            content: '';
+            position: absolute;
+            right: 0.5vmin;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1.5vmin;
+            height: 1.2vmin;
+            background: linear-gradient(135deg, #4a4a4a, #2a2a2a);
+            border-radius: 0.3vmin;
+            border: 0.1vmin solid #1a1a1a;
+            box-shadow:
+                inset 0.1vmin 0.1vmin 0.2vmin rgba(255, 255, 255, 0.2),
+                0 0.2vmin 0.4vmin rgba(0, 0, 0, 0.3);
+        }
+
+        /* Tonearm rest stand */
+        .tonearm-rest {
+            position: absolute;
+            left: calc(50% + 30vmin);
+            top: calc(50% - 10vmin);
+            width: 2vmin;
+            height: 3vmin;
+            transform: translate(-50%, -50%) translateZ(0vmin) rotateZ(-90deg) translateX(16vmin);
+            transform-style: preserve-3d;
+            z-index: 45;
+        }
+
+        .tonearm-rest::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #666, #444, #333);
+            border-radius: 0.3vmin;
+            box-shadow: 0 0.3vmin 0.6vmin rgba(0, 0, 0, 0.5);
+        }
+
+        .tonearm-rest::after {
+            content: '';
+            position: absolute;
+            top: -0.5vmin;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3vmin;
+            height: 0.5vmin;
+            background: linear-gradient(90deg, #555, #777, #555);
+            border-radius: 50%;
+            box-shadow: 0 0.2vmin 0.4vmin rgba(0, 0, 0, 0.4);
+        }
+
+        /* ------------------------------------ */
+        /* 5. Disque Vinyle (Compensation)      */
+        /* ------------------------------------ */
+        .record-container {
+            width: 65vmin;
+            height: 65vmin;
+            position: absolute;
+            top: 55%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateZ(6.5vmin);
+            transform-style: preserve-3d;
+            transform-origin: center center;
+            background-color: #888;
+            border-radius: 50%;
+            z-index: 10;
+        }
+
+        .platter {
+            width: 90%;
+            height: 90%;
+            background-color: #444;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .vinyl-record {
+            width: 90%;
+            height: 90%;
+            border-radius: 50%;
+            background-image: url('https://tclaret.github.io/turntable/img/DISC.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border: 0.5vw solid #0a0a0a;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: spin var(--speed-33-duration) linear infinite running;
+            transform-origin: center center;
+            cursor: grab;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .vinyl-record:hover {
+            box-shadow: 0 0 25px rgba(192, 57, 43, 0.5);
+        }
+
+        .vinyl-record.scratching {
+            cursor: grabbing;
+            animation-play-state: paused !important;
+        }
+
+        /* Glow rouge visible uniquement en mode debug */
+        .scene.debug .vinyl-record.scratching {
+            box-shadow: 0 0 45px rgba(192, 57, 43, 0.95), 0 0 80px rgba(231, 76, 60, 0.5);
+            filter: brightness(1.1);
+        }
+
+        .vinyl-record::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1.5vw;
+            height: 1.5vw;
+            border-radius: 50%;
+            background-color: #000;
+            z-index: 2;
+            opacity: 0;
+        }
+
+        .scene.debug .vinyl-record::after {
+            opacity: 1;
+        }
+
+        @keyframes spin {
+            from {
+                transform: translate(-50%, -50%) rotateZ(0deg);
+            }
+
+            to {
+                transform: translate(-50%, -50%) rotateZ(360deg);
+            }
+        }
+
+        @keyframes spin-reverse {
+            from {
+                transform: translate(-50%, -50%) rotateZ(0deg);
+            }
+
+            to {
+                transform: translate(-50%, -50%) rotateZ(-360deg);
+            }
+        }
+
+        /* Indicateur de vitesse de scratch */
+        .scratch-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 28px;
+            font-weight: bold;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            border: 2px solid rgba(192, 57, 43, 0.8);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .scratch-indicator.visible {
+            opacity: 1;
+        }
+
+        .scratch-indicator .speed-value {
+            color: #e74c3c;
+            font-size: 36px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            font-family: 'Courier New', monospace;
+        }
+
+        .scratch-indicator::before {
+            content: '🎵 SCRATCH ';
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-right: 10px;
+        }
+
+        /* Message de démarrage */
+        .starting-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            font-size: 24px;
+            font-weight: normal;
+            z-index: 999;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            text-transform: lowercase;
+            letter-spacing: 1px;
+        }
+
+        .starting-message.visible {
+            opacity: 1;
+        }
+
+        .starting-message::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+
+            0%,
+            20% {
+                content: '.';
+            }
+
+            40% {
+                content: '..';
+            }
+
+            60%,
+            100% {
+                content: '...';
+            }
+        }
+
+        /* ------------------------------------ */
+        /* Overlay de sélection de vitesse      */
+        /* ------------------------------------ */
+        .speed-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .speed-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .speed-selector-panel {
+            background-color: #333;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .speed-selector-panel h3 {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 20px;
+            margin-top: 0;
+        }
+
+        .speed-option {
+            display: block;
+            width: 200px;
+            padding: 15px 20px;
+            margin: 10px auto;
+            font-size: 18px;
+            font-weight: bold;
+            border: 2px solid #555;
+            border-radius: 5px;
+            background-color: #444;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .speed-option:hover {
+            background-color: #555;
+            border-color: #777;
+        }
+
+        .speed-option.selected {
+            background-color: var(--color-primary);
+            border-color: var(--color-primary);
+        }
+
+        /* ------------------------------------ */
+        /* Media Queries - Mode Portrait/Mobile */
+        /* ------------------------------------ */
+        @media (orientation: portrait) {
+            .scene {
+                width: 95vw;
+                height: 95vw;
+                max-width: 600px;
+                max-height: 600px;
+                margin-top: 120px;
+            }
+
+            body {
+                padding-top: 110px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .interface-controls {
+                padding: 8px 0;
+            }
+
+            .controls-line {
+                gap: 10px;
+                padding: 3px 0;
+            }
+
+            .control-btn {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+
+            .pitch-group label {
+                font-size: 12px;
+            }
+
+            .pitch-slider {
+                width: 80px;
+            }
+        }
+
+        /* Contrôles de zoom mobile */
+        .zoom-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .zoom-controls {
+                display: flex;
+            }
+        }
+
+        .zoom-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .zoom-btn:active {
+            transform: scale(0.9);
+            background: rgba(0, 0, 0, 0.9);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="interface-controls">
+        <div class="controls-line">
+            <button id="set33-btn" class="control-btn">SET 33 RPM</button>
+            <button id="setstop-btn" class="control-btn active">SET STOP</button>
+            <button id="set45-btn" class="control-btn">SET 45 RPM</button>
+        </div>
+
+        <div class="controls-line">
+            <button id="direction-btn" class="control-btn">Direction (Reverse)</button>
+            <div class="pitch-group">
+                <label for="pitch-slider">Pitch (Vitesse):</label>
+                <input type="range" id="pitch-slider" class="pitch-slider" min="0.5" max="1.5" step="0.01" value="1.0"
+                    aria-label="Contrôle du pitch de la vitesse de lecture">
+            </div>
+            <button id="toggle-debug" class="control-btn">Masquer Debug</button>
+        </div>
+    </div>
+
+    <div class="scene">
+        <div class="scene-inner">
+            <div class="scene-base">
+                <div class="scene-base-top"></div>
+                <div class="scene-base-front"></div>
+                <div class="scene-base-back"></div>
+                <div class="scene-base-left"></div>
+                <div class="scene-base-right"></div>
+                <div class="scene-base-foot scene-base-foot1"></div>
+                <div class="scene-base-foot scene-base-foot2"></div>
+                <div class="scene-base-foot scene-base-foot3"></div>
+                <div class="scene-base-foot scene-base-foot4"></div>
+            </div>
+
+            <!-- Croix rouge de position (X=-1, Y=+1, Z=+0.5) -->
+            <div class="position-marker"
+                style="left: calc(50% - 10vmin); top: calc(50% + 10vmin); transform: translate(-50%, -50%) translateZ(8vmin);">
+            </div>
+
+            <!-- Croix bleue de position (X=1, Y=-1, Z=0) -->
+            <div class="position-marker position-marker-blue"
+                style="left: calc(50% + 10vmin); top: calc(50% - 10vmin); transform: translate(-50%, -50%) translateZ(0vmin);">
+            </div>
+
+            <!-- Grilles de débogage 3D -->
+            <div class="debug-grid-xz">
+                <!-- Noms des axes -->
+                <div class="axis-name"
+                    style="left: 95%; top: 50%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(1vmin); color: #00d4ff;">
+                    X</div>
+                <div class="axis-name"
+                    style="left: 50%; top: 95%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(1vmin); color: #00d4ff;">
+                    Z</div>
+                <!-- Labels axe X (horizontal) -->
+                <div class="grid-label grid-label-xz"
+                    style="left: 50%; top: 10%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">0
+                </div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 60%; top: 10%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">1
+                </div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 70%; top: 10%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">2
+                </div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 80%; top: 10%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">3
+                </div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 90%; top: 10%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">4
+                </div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 40%; top: 10%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">
+                    -1</div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 30%; top: 10%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">
+                    -2</div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 20%; top: 10%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">
+                    -3</div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 10%; top: 10%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">
+                    -4</div>
+                <!-- Labels axe Z (vertical sur plan XZ) -->
+                <div class="grid-label grid-label-xz"
+                    style="left: 10%; top: 50%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">0
+                </div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 10%; top: 60%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">1
+                </div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 10%; top: 70%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">2
+                </div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 10%; top: 80%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">3
+                </div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 10%; top: 90%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">4
+                </div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 10%; top: 40%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">
+                    -1</div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 10%; top: 30%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">
+                    -2</div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 10%; top: 20%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">
+                    -3</div>
+                <div class="grid-label grid-label-xz"
+                    style="left: 10%; top: 10%; transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.5vmin);">
+                    -4</div>
+            </div>
+            <div class="debug-grid-yz">
+                <!-- Noms des axes -->
+                <div class="axis-name"
+                    style="left: 95%; top: 50%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(1vmin); color: #ff00ff;">
+                    Z</div>
+                <div class="axis-name"
+                    style="left: 50%; top: 5%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(1vmin); color: #ff00ff;">
+                    Y</div>
+                <!-- Labels axe Y (horizontal sur plan YZ) -->
+                <div class="grid-label grid-label-yz"
+                    style="left: 10%; top: 50%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">0
+                </div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 10%; top: 40%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">1
+                </div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 10%; top: 30%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">2
+                </div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 10%; top: 20%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">3
+                </div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 10%; top: 10%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">4
+                </div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 10%; top: 60%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">
+                    -1</div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 10%; top: 70%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">
+                    -2</div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 10%; top: 80%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">
+                    -3</div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 10%; top: 90%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">
+                    -4</div>
+                <!-- Labels axe Z (vertical sur plan YZ) -->
+                <div class="grid-label grid-label-yz"
+                    style="left: 50%; top: 10%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">0
+                </div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 60%; top: 10%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">1
+                </div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 70%; top: 10%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">2
+                </div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 80%; top: 10%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">3
+                </div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 90%; top: 10%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">4
+                </div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 40%; top: 10%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">
+                    -1</div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 30%; top: 10%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">
+                    -2</div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 20%; top: 10%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">
+                    -3</div>
+                <div class="grid-label grid-label-yz"
+                    style="left: 10%; top: 10%; transform: translate(-50%, -50%) rotateY(-90deg) translateZ(0.5vmin);">
+                    -4</div>
+            </div>
+            <div class="debug-grid-xy"></div>
+
+            <!-- Repères de débogage 3D -->
+            <div class="debug-axis">
+                <div class="axis-x"></div>
+                <div class="axis-y"></div>
+                <div class="axis-z"></div>
+            </div>
+
+            <!-- Boîtes de délimitation -->
+            <div class="debug-box debug-box-base"></div>
+            <div class="debug-box debug-box-record"></div>
+            <div class="debug-box debug-box-arm"></div>
+
+            <!-- Lignes de debug pour le bras -->
+            <div class="debug-arm-pivot" style="left: 75%; top: 55%;"></div>
+            <div class="debug-arm-center" style="left: 50%; top: 55%;"></div>
+            <div class="debug-arm-line" style="left: 75%; top: 55%; width: 30vmin;"></div>
+            <div class="debug-arm-label" style="left: 75%; top: 52%;">Pivot Bras (75%, 55%)</div>
+            <div class="debug-arm-label" style="left: 50%; top: 52%;">Centre Disque (50%, 55%)</div>
+            <div class="debug-arm-label" style="left: 75%; top: 58%;">Z: 5vmin</div>
+
+            <div class="turntable-base">
+                <div class="speed-selector-container">
+                    <div class="selector-label">33 — STOP — 45</div>
+                    <div class="selector-base">
+                        <div id="speed-knob" class="selector-knob"></div>
+                    </div>
+                </div>
+
+                <div class="pitch-control-container">
+                    <div class="pitch-control-base">
+                        <div id="pitch-knob" class="pitch-control-knob"></div>
+                    </div>
+                </div>
+
+                <div class="tonearm-lift-fixed"></div>
+
+                <div class="tonearm-rest"></div>
+                <div id="tonearm-container" class="tonearm-container">
+                    <div class="tonearm-counterweight"></div>
+                    <div class="tonearm-image">
+                        <svg viewBox="0 0 280 60" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="armGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#e8e8e8;stop-opacity:1" />
+                                    <stop offset="50%" style="stop-color:#c0c0c0;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#a0a0a0;stop-opacity:1" />
+                                </linearGradient>
+                                <linearGradient id="armShine" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#fff;stop-opacity:0.3" />
+                                    <stop offset="50%" style="stop-color:#fff;stop-opacity:0.1" />
+                                    <stop offset="100%" style="stop-color:#fff;stop-opacity:0" />
+                                </linearGradient>
+                            </defs>
+                            <!-- Tonearm with realistic S-curve (extended to pivot) -->
+                            <path
+                                d="M 0,30 L 8,32 C 8,42 35,48 70,40 C 100,33 130,25 160,30 C 190,35 220,40 250,38 C 265,37 272,36 275,35 
+                                 L 275,25 C 272,24 265,23 250,22 C 220,20 190,25 160,20 C 130,15 100,23 70,30 C 35,37 8,28 8,28 L 0,30 Z"
+                                fill="url(#armGradient)" stroke="#888" stroke-width="0.6" />
+                            <!-- Shine effect -->
+                            <path
+                                d="M 2,30 L 10,31 C 10,40 35,45 70,38 C 100,32 130,24 160,29 C 190,34 220,38 250,36 C 262,35 270,34 273,33"
+                                fill="none" stroke="url(#armShine)" stroke-width="3" opacity="0.6" />
+                        </svg>
+                        <div class="tonearm-headshell"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="record-container">
+                <div class="platter"></div>
+                <div class="vinyl-record"></div>
+                <!-- Marqueurs de position du bras en mode debug -->
+                <div class="arm-position-marker arm-position-start" id="arm-start-marker">
+                    <div class="arm-position-label">Start</div>
+                </div>
+                <div class="arm-position-marker arm-position-end" id="arm-end-marker">
+                    <div class="arm-position-label">End (Label edge)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contrôles de débogage -->
+    <div class="debug-controls">
+        <h4 style="margin-top: 0;">Infos Debug</h4>
+        <div style="margin-top: 10px; font-size: 12px;">
+            <label
+                style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; background: rgba(255, 107, 107, 0.1); border-radius: 5px; margin-bottom: 10px;">
+                <input type="checkbox" id="debug-scratch-overlay" style="cursor: pointer;">
+                <span>Afficher overlay scratch</span>
+            </label>
+            <hr style="border-color: #555; margin: 8px 0;">
+            <div><strong>Axes:</strong> Rouge=X, Vert=Y, Bleu=Z</div>
+            <div><strong>Boîtes:</strong> Jaune=Base, Cyan=Disque, Magenta=Bras</div>
+            <hr style="border-color: #555; margin: 8px 0;">
+            <div><strong>Bras de lecture:</strong></div>
+            <div>- Cercle magenta = Pivot</div>
+            <div>- Cercle cyan = Centre disque</div>
+            <div>- Ligne magenta = Portée du bras</div>
+        </div>
+    </div>
+
+    <!-- Overlay de sélection de vitesse -->
+    <div id="speed-overlay" class="speed-overlay">
+        <div class="speed-selector-panel">
+            <h3>Sélectionner la vitesse</h3>
+            <button class="speed-option" data-speed="33">33 RPM</button>
+            <button class="speed-option selected" data-speed="0">STOP</button>
+            <button class="speed-option" data-speed="45">45 RPM</button>
+        </div>
+    </div>
+
+    <!-- Contrôles de zoom mobile -->
+    <div class="zoom-controls">
+        <button class="zoom-btn" id="zoom-in">+</button>
+        <button class="zoom-btn" id="zoom-out">−</button>
+        <button class="zoom-btn" id="zoom-reset" style="font-size: 18px;">⟲</button>
+    </div>
+
+    <!-- Indicateur de scratch -->
+    <div id="scratch-indicator" class="scratch-indicator">
+        <span class="speed-value">×1.0</span>
+    </div>
+
+    <!-- Message de démarrage -->
+    <div id="starting-message" class="starting-message">Starting</div>
+
+    <!-- Charger Tone.js depuis CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const vinyl = document.querySelector('.vinyl-record');
+            const recordContainer = document.querySelector('.record-container');
+            const selectorBase = document.querySelector('.selector-base');
+            const selectorContainer = document.querySelector('.speed-selector-container');
+            const set33Btn = document.getElementById('set33-btn');
+            const setStopBtn = document.getElementById('setstop-btn');
+            const set45Btn = document.getElementById('set45-btn');
+            const directionBtn = document.getElementById('direction-btn');
+            const pitchSlider = document.getElementById('pitch-slider');
+            const tonearmContainer = document.getElementById('tonearm-container');
+            const pitchKnob = document.getElementById('pitch-knob');
+            const speedOverlay = document.getElementById('speed-overlay');
+            const speedOptions = document.querySelectorAll('.speed-option');
+
+            // Contrôles de zoom mobile
+            const zoomInBtn = document.getElementById('zoom-in');
+            const zoomOutBtn = document.getElementById('zoom-out');
+            const zoomResetBtn = document.getElementById('zoom-reset');
+            let currentScale = 1.0;
+            const scaleStep = 0.15;
+            const minScale = 0.5;
+            const maxScale = 2.0;
+
+            if (zoomInBtn) {
+                zoomInBtn.addEventListener('click', () => {
+                    currentScale = Math.min(currentScale + scaleStep, maxScale);
+                    scene.style.transform = `scale(${currentScale})`;
+                });
+            }
+
+            if (zoomOutBtn) {
+                zoomOutBtn.addEventListener('click', () => {
+                    currentScale = Math.max(currentScale - scaleStep, minScale);
+                    scene.style.transform = `scale(${currentScale})`;
+                });
+            }
+
+            if (zoomResetBtn) {
+                zoomResetBtn.addEventListener('click', () => {
+                    currentScale = 1.0;
+                    scene.style.transform = `scale(${currentScale})`;
+                    rotationX = 30;
+                    rotationZ = 0;
+                    sceneInner.style.transform = `rotateX(${rotationX}deg) rotateZ(${rotationZ}deg)`;
+                });
+            }
+
+            // Contrôle du mode debug
+            const scene = document.querySelector('.scene');
+
+            // Mode debug pour l'overlay de scratch
+            let debugScratchOverlay = false;
+            const debugScratchToggle = document.getElementById('debug-scratch-overlay');
+            if (debugScratchToggle) {
+                debugScratchToggle.addEventListener('change', (e) => {
+                    debugScratchOverlay = e.target.checked;
+                    console.log(`🔧 Mode debug overlay scratch: ${debugScratchOverlay ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`);
+                });
+            }
+            const sceneInner = document.querySelector('.scene-inner');
+            const toggleDebugBtn = document.getElementById('toggle-debug');
+
+            // Mode debug désactivé par défaut
+            // scene.classList.add('debug');
+
+            if (toggleDebugBtn) {
+                toggleDebugBtn.textContent = 'Afficher Debug';
+                toggleDebugBtn.addEventListener('click', () => {
+                    scene.classList.toggle('debug');
+                    toggleDebugBtn.textContent = scene.classList.contains('debug') ? 'Masquer Debug' : 'Afficher Debug';
+                });
+            }
+
+            // Contrôle de la rotation 3D avec la souris et le tactile
+            let isDragging = false;
+            let startX = 0, startY = 0;
+            let rotationX = 45, rotationZ = -10;
+
+            // Gestion souris
+            scene.addEventListener('mousedown', (e) => {
+                // Ne pas activer le drag 3D si on clique sur le vinyl (pour le scratch)
+                if (e.target.closest('.vinyl-record')) {
+                    return;
+                }
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                scene.style.cursor = 'grabbing';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                // Ne pas faire de rotation 3D pendant le scratch
+                if (isScratching) return;
+                if (!isDragging) return;
+                const deltaX = e.clientX - startX;
+                const deltaY = e.clientY - startY;
+
+                rotationX -= deltaY * 0.3;
+                rotationZ += deltaX * 0.3;
+
+                // Limiter l'angle X pour éviter des rotations extrêmes
+                rotationX = Math.max(-90, Math.min(90, rotationX));
+
+                sceneInner.style.transform = `rotateX(${rotationX}deg) rotateZ(${rotationZ}deg)`;
+
+                startX = e.clientX;
+                startY = e.clientY;
+            });
+
+            document.addEventListener('mouseup', () => {
+                // Arrêter le drag 3D (mais pas le scratch, géré séparément)
+                if (!isScratching) {
+                    isDragging = false;
+                    scene.style.cursor = 'grab';
+                } else {
+                    // Si on scratche, forcer l'arrêt du drag 3D
+                    isDragging = false;
+                }
+            });
+
+            // Gestion tactile (mobile)
+            scene.addEventListener('touchstart', (e) => {
+                // Ne pas activer le drag 3D si on touche le vinyl (pour le scratch)
+                if (e.target.closest('.vinyl-record')) {
+                    return;
+                }
+                isDragging = true;
+                const touch = e.touches[0];
+                startX = touch.clientX;
+                startY = touch.clientY;
+                e.preventDefault();
+            }, { passive: false });
+
+            document.addEventListener('touchmove', (e) => {
+                // Ne pas faire de rotation 3D pendant le scratch
+                if (isScratching) return;
+                if (!isDragging) return;
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - startX;
+                const deltaY = touch.clientY - startY;
+
+                rotationX -= deltaY * 0.3;
+                rotationZ += deltaX * 0.3;
+
+                // Limiter l'angle X pour éviter des rotations extrêmes
+                rotationX = Math.max(-90, Math.min(90, rotationX));
+
+                sceneInner.style.transform = `rotateX(${rotationX}deg) rotateZ(${rotationZ}deg)`;
+
+                startX = touch.clientX;
+                startY = touch.clientY;
+            }, { passive: true });
+
+            document.addEventListener('touchend', () => {
+                // Arrêter le drag 3D (le scratch est géré séparément)
+                if (!isScratching) {
+                    isDragging = false;
+                } else {
+                    isDragging = false;
+                }
+            });
+
+            // Zoom avec la molette de la souris
+            scene.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const currentPerspective = parseInt(scene.style.perspective || '1500');
+                const newPerspective = currentPerspective + (e.deltaY > 0 ? 100 : -100);
+                scene.style.perspective = `${Math.max(500, Math.min(3000, newPerspective))}px`;
+            });
+
+            scene.style.cursor = 'grab';
+
+            const RPM_33 = 33.33;
+            const RPM_45 = 45;
+            const BASE_DURATION = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--speed-33-duration').replace('s', ''));
+
+            let isRunning = false;
+            let currentSpeedDuration = BASE_DURATION;
+            let isReversed = false;
+
+            // Variables audio
+            const audioElement = new Audio('Hot_Pants.opus');
+            audioElement.loop = false;
+            audioElement.preservesPitch = false; // Permettre la variation de pitch
+            let currentRPM = 0;
+
+            // Son du bras de tourne-disque (mouvement mécanique)
+            const tonearmSound = new Audio();
+            tonearmSound.volume = 0.3; // Volume modéré pour un effet subtil
+
+            // === SYSTÈME AUDIO AVEC TONE.JS ===
+            // Initialiser Tone.js
+            let tonePlayer = null;
+            let tonePitchShift = null;
+            let toneInitialized = false;
+
+            async function initToneJS() {
+                try {
+                    await Tone.start();
+                    console.log('🎵 Tone.js démarré avec succès');
+
+                    // Créer le pitch shift effect avec paramètres optimisés
+                    tonePitchShift = new Tone.PitchShift({
+                        pitch: 0, // En demi-tons
+                        windowSize: 0.03, // Petite fenêtre pour faible latence (30ms)
+                        delayTime: 0,
+                        feedback: 0
+                    }).toDestination();
+
+                    toneInitialized = true;
+                    console.log('✅ Tone.js pitch shift initialisé');
+                    return true;
+                } catch (error) {
+                    console.error('❌ Erreur initialisation Tone.js:', error);
+                    return false;
+                }
+            }
+
+            // Créer un AudioContext Web Audio pour le son du bras (compatible)
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            function createTonearmSound() {
+                const duration = 1.5;
+                const sampleRate = audioContext.sampleRate;
+                const buffer = audioContext.createBuffer(1, duration * sampleRate, sampleRate);
+                const data = buffer.getChannelData(0);
+
+                for (let i = 0; i < buffer.length; i++) {
+                    const t = i / sampleRate;
+                    const noise = (Math.random() * 2 - 1) * 0.1;
+                    const envelope = Math.exp(-t * 2);
+                    const lowFreq = Math.sin(2 * Math.PI * 60 * t) * 0.05;
+                    data[i] = (noise + lowFreq) * envelope;
+                }
+                return buffer;
+            }
+
+            // === CLASSE DE SCRATCH AVEC TONE.JS ===
+            class ToneJSScratcher {
+                constructor(audioElement) {
+                    this.audioElement = audioElement;
+                    this.isScratching = false;
+                    this.currentPlaybackPosition = 0;
+                    this.isInitialized = false;
+                    this.duration = 0;
+                    this.wasPlaying = false;
+                }
+
+                // Charger l'audio avec Tone.js Player
+                async loadFromAudioElement() {
+                    try {
+                        if (!toneInitialized) {
+                            await initToneJS();
+                        }
+
+                        console.log('🎵 Chargement du fichier audio avec Tone.js...');
+
+                        // Créer le player Tone.js
+                        tonePlayer = new Tone.Player({
+                            url: this.audioElement.src,
+                            loop: false,
+                            onload: () => {
+                                this.isInitialized = true;
+                                this.duration = tonePlayer.buffer.duration;
+                                console.log('✅ Audio chargé avec Tone.js:', this.duration, 'secondes');
+
+                                // Connecter au pitch shift
+                                tonePlayer.connect(tonePitchShift);
+                            }
+                        });
+
+                        // Attendre que le buffer soit chargé
+                        await Tone.loaded();
+                        return true;
+                    } catch (error) {
+                        console.error('❌ Erreur chargement audio Tone.js:', error);
+                        return false;
+                    }
+                }
+
+                // Démarrer le mode scratch
+                startScratch(currentPosition) {
+                    if (!this.isInitialized) return;
+
+                    this.isScratching = true;
+                    this.currentPlaybackPosition = currentPosition;
+
+                    // Si le player était en lecture, le stopper
+                    if (tonePlayer && tonePlayer.state === 'started') {
+                        this.wasPlaying = true;
+                        tonePlayer.stop();
+                    } else {
+                        this.wasPlaying = false;
+                    }
+
+                    console.log('🎵 Scratch mode activé');
+                }
+
+                // Mettre à jour la position pendant le scratch
+                updatePosition(newPosition, velocity) {
+                    if (!this.isInitialized || !this.isScratching) return;
+
+                    // Limiter la position
+                    this.currentPlaybackPosition = Math.max(0, Math.min(this.duration, newPosition));
+
+                    // Détection du sens : velocity < 0 = rotation counter-clockwise (arrière)
+                    // Seuil très bas pour éviter de basculer trop vite, mais s'assurer qu'on reste en arrière tant que vitesse négative
+                    const isBackward = velocity < -0.0001;
+                    const absVelocity = Math.abs(velocity);
+
+                    // Calculer le pitch shift basé sur la vélocité absolue - Gamme étendue pour effet plus extrême
+                    const pitchSemitones = Math.max(-24, Math.min(24, absVelocity * 12));
+
+                    if (tonePitchShift) {
+                        tonePitchShift.pitch = pitchSemitones;
+                    }
+
+                    // Jouer un grain court à la position actuelle
+                    if (tonePlayer) {
+                        // Utiliser seek + start/stop pour un grain
+                        try {
+                            if (tonePlayer.state === 'started') {
+                                tonePlayer.stop();
+                            }
+
+                            const grainDuration = 0.05; // 50ms
+
+                            // CONTRÔLE DE LA DIRECTION avec player.reverse (comme sur le site de référence)
+                            tonePlayer.reverse = isBackward;
+
+                            // Appliquer un playbackRate basé sur la vitesse (toujours positif)
+                            // Gamme étendue: 0.0 (arrêt complet) à 4.0 (rapide)
+                            // On autorise la vitesse 0 pour que l'audio "colle" vraiment au mouvement (stick)
+                            tonePlayer.playbackRate = Math.max(0, Math.min(4.0, absVelocity * 2));
+
+                            // Jouer le grain
+                            tonePlayer.start('+0', this.currentPlaybackPosition, grainDuration);
+
+                            // Programmer l'arrêt du grain
+                            Tone.Transport.scheduleOnce(() => {
+                                if (this.isScratching && tonePlayer.state === 'started') {
+                                    tonePlayer.stop();
+                                }
+                            }, '+0.05');
+                        } catch (e) {
+                            // Silencieux si erreur (player occupé)
+                        }
+                    }
+                }
+
+                // Arrêter le mode scratch
+                stopScratch() {
+                    if (!this.isInitialized) return;
+
+                    this.isScratching = false;
+
+                    // Réinitialiser le pitch
+                    if (tonePitchShift) {
+                        tonePitchShift.pitch = 0;
+                    }
+
+                    // Ne pas redémarrer automatiquement ici - c'est géré dans mouseup/touchend
+
+                    console.log('🎵 Scratch mode désactivé');
+                }
+
+                // Obtenir la position actuelle
+                getPosition() {
+                    // Si le player est en lecture, retourner sa position réelle
+                    if (tonePlayer && tonePlayer.state === 'started') {
+                        return tonePlayer.toSeconds(tonePlayer.immediate());
+                    }
+                    // Sinon retourner la dernière position connue
+                    return this.currentPlaybackPosition;
+                }
+            }
+
+            // Créer l'instance du scratcher Tone.js
+            const audioScratcher = new ToneJSScratcher(audioElement);
+
+            // Variables de scratching
+            let isScratching = false;
+            let scratchStartAngle = 0;
+            let scratchLastAngle = 0;
+            let scratchRotation = 0;
+            let scratchVelocity = 0;
+            let lastScratchTime = 0;
+            let scratchAnimationFrame = null;
+            let previousScratchRotation = 0; // Ajout pour le calcul du delta
+
+            // === VARIABLES ABSOLUTE SYNC ===
+            let anchorRotation = 0;   // Angle visuel au début du scratch
+            let anchorAudioTime = 0;  // Temps audio au début du scratch
+            let lastMoveTime = 0;     // Timestamp du dernier mouvement pour détecter l'arrêt (Ghost Playback Fix)
+
+            let audioStartTime = 0; // Position audio au moment du scratch
+            const FRICTION_COEFFICIENT = 0.92; // Friction pour la décélération après relâchement
+            const scratchIndicator = document.getElementById('scratch-indicator');
+            const scratchIndicatorValue = scratchIndicator.querySelector('.speed-value');
+            let indicatorTimeout = null;
+            const startingMessage = document.getElementById('starting-message');
+
+            // Variables pour l'animation du bras
+            let animationFrameId = null;
+            let armStartTime = 0;
+            let currentArmPosition = null; // Position actuelle du bras
+            let armState = 'rest'; // 'rest', 'lifted', 'playing'
+
+            // Angles Z de début et de fin pour le mouvement du bras
+            const ARM_REST_Z_ANGLE = -90;    // Position repos sur le support
+            const ARM_START_Z_ANGLE = -80;   // Position de démarrage sur le disque
+            const ARM_END_Z_ANGLE = 135;     // Position au centre du disque
+            const ARM_TOTAL_PLAY_DURATION_SECONDS = 720; // 12 minutes pour parcourir du bord à l'étiquette centrale
+
+            // Hauteurs Z (profondeur 3D) - maintenant en angles de rotation X
+            const ARM_HEIGHT_REST = 0;       // Sur le support (horizontal)
+            const ARM_HEIGHT_LIFTED = 15;    // Levé pour déplacer (angle positif)
+            const ARM_HEIGHT_PLAYING = 5;    // Sur le disque en lecture (léger angle)
+
+            // Éléments des marqueurs de position
+            const armStartMarker = document.getElementById('arm-start-marker');
+            const armEndMarker = document.getElementById('arm-end-marker');
+
+            // Fonction pour calculer la position d'un point sur le cercle du disque
+            function calculateArmPositionOnRecord(angle) {
+                // Le disque a un rayon de 45% (90% / 2)
+                // Position de démarrage: à 96% du rayon (près du bord)
+                // Position finale: à 30% du rayon (avant l'étiquette centrale)
+                const recordRadius = 45; // % du container
+
+                if (angle === ARM_START_Z_ANGLE) {
+                    // Position de démarrage sur le bord extérieur
+                    const distance = recordRadius * 0.96; // 96% du rayon (très près du bord)
+                    const angleRad = (angle - 90) * Math.PI / 180; // Ajuster pour CSS rotation
+                    return {
+                        x: 50 + distance * Math.cos(angleRad),
+                        y: 50 + distance * Math.sin(angleRad)
+                    };
+                } else if (angle === ARM_END_Z_ANGLE) {
+                    // Position finale avant l'étiquette centrale (30% du rayon)
+                    const distance = recordRadius * 0.30; // 30% du rayon depuis le centre
+                    const angleRad = (angle - 90) * Math.PI / 180;
+                    return {
+                        x: 50 + distance * Math.cos(angleRad),
+                        y: 50 + distance * Math.sin(angleRad)
+                    };
+                }
+            }
+
+            // Positionner les marqueurs
+            function updateArmMarkers() {
+                const startPos = calculateArmPositionOnRecord(ARM_START_Z_ANGLE);
+                const endPos = calculateArmPositionOnRecord(ARM_END_Z_ANGLE);
+
+                armStartMarker.style.left = `${startPos.x}%`;
+                armStartMarker.style.top = `${startPos.y}%`;
+
+                armEndMarker.style.left = `${endPos.x}%`;
+                armEndMarker.style.top = `${endPos.y}%`;
+
+                console.log('=== Coordonnées des marqueurs de bras ===');
+                console.log(`Start position: x=${startPos.x.toFixed(2)}%, y=${startPos.y.toFixed(2)}%`);
+                console.log(`End position (avant étiquette): x=${endPos.x.toFixed(2)}%, y=${endPos.y.toFixed(2)}%`);
+                console.log(`Angle de démarrage: ${ARM_START_Z_ANGLE}°`);
+                console.log(`Angle de fin: ${ARM_END_Z_ANGLE}°`);
+            }
+
+            // Mettre à jour les marqueurs au chargement
+            updateArmMarkers();
+
+
+            function getAnimationDuration(rpm) {
+                if (rpm === 0) return 1000;
+                const duration = BASE_DURATION * (RPM_33 / rpm);
+                return duration.toFixed(2);
+            }
+
+            function updateAnimation() {
+                const pitchFactor = parseFloat(pitchSlider.value);
+                let finalDuration;
+
+                if (isRunning) {
+                    finalDuration = (currentSpeedDuration / pitchFactor).toFixed(2);
+                } else {
+                    finalDuration = 1000;
+                }
+
+                vinyl.style.animationName = isReversed ? 'spin-reverse' : 'spin';
+                vinyl.style.animationDuration = `${finalDuration}s`;
+                vinyl.style.animationPlayState = isRunning ? 'running' : 'paused';
+
+                // Mettre à jour la position du pitch knob visuel
+                // pitch varie de 0.5 à 1.5, knob doit aller de 90% (bas) à 10% (haut)
+                const minPitch = 0.5;
+                const maxPitch = 1.5;
+                const minTop = 90; // %
+                const maxTop = 10; // %
+                const topPosition = maxTop + (minTop - maxTop) * (maxPitch - pitchFactor) / (maxPitch - minPitch);
+                pitchKnob.style.top = `${topPosition}%`;
+
+                // Mettre à jour la vitesse de l'audio
+                updateAudioPlaybackRate();
+            }
+
+            function updateAudioPlaybackRate() {
+                if (!isRunning || currentRPM === 0) return;
+
+                const pitchFactor = parseFloat(pitchSlider.value);
+                // Calcul du taux de lecture : 
+                // À 33 RPM avec pitch 1.0 = vitesse normale (1.0)
+                // À 45 RPM avec pitch 1.0 = vitesse augmentée (45/33 ≈ 1.35)
+                const speedRatio = currentRPM / RPM_33;
+                const playbackRate = speedRatio * pitchFactor;
+
+                // Utiliser Tone.js playbackRate au lieu de audioElement
+                if (tonePlayer && tonePlayer.buffer) {
+                    tonePlayer.playbackRate = playbackRate;
+                }
+            }
+
+            // Fonction pour calculer l'angle entre le centre du disque et la position de la souris
+            function getAngleFromCenter(clientX, clientY, element) {
+                const rect = element.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const deltaX = clientX - centerX;
+                const deltaY = clientY - centerY;
+                return Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+            }
+
+            // Fonction pour normaliser les angles (gérer le passage de 180° à -180°)
+            function normalizeAngleDelta(delta) {
+                if (delta > 180) return delta - 360;
+                if (delta < -180) return delta + 360;
+                return delta;
+            }
+
+            // Fonction pour mettre à jour l'indicateur de scratch
+            function updateScratchIndicator(velocity) {
+                // Afficher l'overlay seulement si le mode debug est activé
+                if (!debugScratchOverlay) return;
+
+                const speedMultiplier = Math.abs(velocity);
+                scratchIndicatorValue.textContent = `×${speedMultiplier.toFixed(1)}`;
+                scratchIndicator.classList.add('visible');
+
+                clearTimeout(indicatorTimeout);
+                indicatorTimeout = setTimeout(() => {
+                    scratchIndicator.classList.remove('visible');
+                }, 1000);
+            }
+
+            // Fonction pour appliquer le scratch sur le disque avec synchronisation audio granulaire
+            function applyScratch() {
+                if (!isScratching) {
+                    if (isRunning) {
+                        // === PHYSICS POLISH (Force to return) ===
+                        // Si le moteur tourne, simuler le couple moteur qui ramène à la vitesse consigne
+                        const targetVelocityDegPerFrame = (360 / getAnimationDuration(currentRPM)) / 60; // ~2.0 en 33RPM
+
+                        // Accélération exponentielle vers la vitesse cible (Taux d'approche)
+                        // 0.02 = Récupération LENTE comme demandé ("retrieve slowly the current speed")
+                        const torqueFactor = 0.02;
+
+                        scratchVelocity = scratchVelocity + (targetVelocityDegPerFrame - scratchVelocity) * torqueFactor;
+
+                        // Si on est assez proche de la vitesse cible, reprendre l'animation CSS
+                        if (Math.abs(scratchVelocity - targetVelocityDegPerFrame) < 0.2) {
+                            // STOPPER LE LOOP MANUEL ET REPRENDRE L'ANIMATION CSS
+                            scratchVelocity = 0;
+                            restoreAnimation();
+                            if (scratchAnimationFrame) {
+                                cancelAnimationFrame(scratchAnimationFrame);
+                                scratchAnimationFrame = null;
+                            }
+                            return;
+                        }
+                    } else {
+                        // Si STOP, friction normale vers 0
+                        scratchVelocity *= FRICTION_COEFFICIENT;
+                        if (Math.abs(scratchVelocity) < 0.01) {
+                            scratchVelocity = 0;
+                            if (scratchAnimationFrame) {
+                                cancelAnimationFrame(scratchAnimationFrame);
+                                scratchAnimationFrame = null;
+                            }
+                            return;
+                        }
+                    }
+
+                    if (!isScratching) {
+                        scratchRotation += scratchVelocity;
+                        vinyl.style.transform = `translate(-50%, -50%) rotateZ(${scratchRotation}deg)`;
+                        vinyl.style.transition = 'none';
+                    }
+                }
+
+                const oldRotation = previousScratchRotation;
+
+                // === SYNCHRONISATION AUDIO ABSOLUE (NO DRIFT) ===
+                if (isRunning && audioScratcher.isInitialized) {
+
+                    // 1. GESTION DU GHOST PLAYBACK (Arrêt si immobile)
+                    // Si on ne bouge plus la souris depuis > 100ms, forcer la vélocité à 0
+                    if (isScratching && (Date.now() - lastMoveTime > 100)) {
+                        scratchVelocity *= 0.1; // Decay rapide
+                    }
+
+                    // 2. ABSOLUTE SYNC CALCULATION
+                    // Au lieu d'additionner des deltas (erreurs cumulatives), on calcule
+                    // le temps EXACT basé sur la distance angulaire depuis le point d'ancrage.
+
+                    // Différence totale depuis le début du clic
+                    // Note: scratchRotation accumule les tours (n'est pas modulo 360)
+                    const totalRotationDelta = scratchRotation - anchorRotation;
+
+                    if (Math.abs(totalRotationDelta) > 0.01 || isScratching) {
+                        // SECONDS_PER_DEGREE constant
+                        // 360 degrés = BASE_DURATION secondes (ex: 3.0s)
+                        const secondsPerDegree = BASE_DURATION / 360;
+
+                        // Temps théorique exact
+                        const timeShift = totalRotationDelta * secondsPerDegree;
+                        let newTime = anchorAudioTime + timeShift;
+
+                        // Clamper le temps
+                        newTime = Math.max(0, Math.min(audioScratcher.audioBuffer.duration, newTime));
+
+                        // Calcul vélocité normalisée pour le pitch
+                        const velocityNormalized = scratchVelocity / 6;
+
+                        // Update ToneJS
+                        audioScratcher.updatePosition(newTime, velocityNormalized);
+
+                        // Fallback HTML Audio
+                        if (Math.abs(audioElement.currentTime - newTime) > 0.1) {
+                            audioElement.currentTime = newTime;
+                        }
+                    }
+                }
+
+                scratchAnimationFrame = requestAnimationFrame(applyScratch);
+            }
+
+            // Fonction d'animation du bras
+            function animateTonearm(timestamp) {
+                if (!armStartTime) armStartTime = timestamp;
+                const elapsedTime = (timestamp - armStartTime) / 1000; // en secondes
+
+                if (elapsedTime < ARM_TOTAL_PLAY_DURATION_SECONDS) {
+                    const progress = elapsedTime / ARM_TOTAL_PLAY_DURATION_SECONDS;
+                    const currentArmZAngle = ARM_START_Z_ANGLE + (ARM_END_Z_ANGLE - ARM_START_Z_ANGLE) * progress;
+                    currentArmPosition = currentArmZAngle; // Sauvegarder la position actuelle
+
+                    // Appliquez la transformation incluant la rotation Z progressive et X pour hauteur
+                    tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(0vmin) rotateZ(${currentArmZAngle}deg) rotateX(${ARM_HEIGHT_PLAYING}deg)`;
+
+                    animationFrameId = requestAnimationFrame(animateTonearm);
+                } else {
+                    // Fin de la lecture, le bras reste au centre
+                    tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(0vmin) rotateZ(${ARM_END_Z_ANGLE}deg) rotateX(${ARM_HEIGHT_PLAYING}deg)`;
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+            }
+
+            // Fonction pour déplacer le bras entre les positions
+            function moveTonearmToPosition(targetAngle, targetHeight) {
+                armState = targetHeight === ARM_HEIGHT_REST ? 'rest' :
+                    targetHeight === ARM_HEIGHT_LIFTED ? 'lifted' : 'playing';
+                tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(0vmin) rotateZ(${targetAngle}deg) rotateX(${targetHeight}deg)`;
+            }
+
+            function setSpeedAndKnob(rpm, button, skipAnimation = false) {
+                [set33Btn, setStopBtn, set45Btn].forEach(btn => btn.classList.remove('active'));
+
+                let baseRotation = 0;
+                currentRPM = rpm;
+
+                if (rpm === RPM_33 || rpm === RPM_45) {
+                    currentSpeedDuration = getAnimationDuration(rpm);
+                    isRunning = true; // Le disque commence à tourner immédiatement
+                    baseRotation = (rpm === RPM_33) ? -20 : 40;
+
+                    if (!skipAnimation) {
+                        // Afficher le message de démarrage
+                        startingMessage.classList.add('visible');
+
+                        // Cacher le message un peu avant la musique (à 1.7 secondes)
+                        setTimeout(() => {
+                            startingMessage.classList.remove('visible');
+                        }, 1700);
+
+                        // Jouer le son du bras de tourne-disque
+                        try {
+                            const source = audioContext.createBufferSource();
+                            source.buffer = createTonearmSound();
+                            const gainNode = audioContext.createGain();
+                            gainNode.gain.value = 0.3;
+                            source.connect(gainNode);
+                            gainNode.connect(audioContext.destination);
+                            source.start(0);
+                        } catch (e) {
+                            console.log('Erreur lecture son du bras:', e);
+                        }
+
+                        // Séquence : Rest -> Lifted -> Playing position (mouvements rapides)
+                        setTimeout(() => {
+                            moveTonearmToPosition(ARM_REST_Z_ANGLE, ARM_HEIGHT_LIFTED); // Lever le bras
+                        }, 100);
+
+                        setTimeout(() => {
+                            moveTonearmToPosition(ARM_START_Z_ANGLE, ARM_HEIGHT_LIFTED); // Déplacer au-dessus du disque
+                        }, 700);
+
+                        setTimeout(() => {
+                            moveTonearmToPosition(ARM_START_Z_ANGLE, ARM_HEIGHT_PLAYING); // Descendre sur le disque
+                        }, 1300);
+
+                        setTimeout(() => {
+                            // Démarrer l'animation du bras et l'audio APRÈS que le bras soit posé
+                            armStartTime = 0;
+                            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                            animationFrameId = requestAnimationFrame(animateTonearm);
+
+                            // Charger le buffer audio pour le scratch avec Tone.js si pas encore fait
+                            if (!audioScratcher.isInitialized) {
+                                audioScratcher.loadFromAudioElement().then(() => {
+                                    console.log('✅ Audio scratcher Tone.js prêt');
+                                    // Démarrer la lecture une fois chargé
+                                    if (tonePlayer) {
+                                        tonePlayer.start();
+                                    }
+                                });
+                            } else {
+                                // Si déjà chargé, continuer à partir de la position actuelle
+                                if (tonePlayer && tonePlayer.buffer) {
+                                    // Récupérer la position actuelle si disponible
+                                    let currentPos = audioScratcher.isInitialized ? audioScratcher.getPosition() : 0;
+
+                                    // S'assurer que la position est valide
+                                    const duration = tonePlayer.buffer.duration;
+                                    currentPos = Math.max(0, Math.min(currentPos, duration - 0.1));
+
+                                    if (tonePlayer.state === 'started') {
+                                        tonePlayer.stop(); // Arrêter si déjà en lecture
+                                    }
+
+                                    // Redémarrer à partir de la position actuelle (ou du début si position = 0)
+                                    tonePlayer.start('+0', currentPos);
+                                    console.log(`🎵 Audio redémarré à ${currentPos.toFixed(2)}s`);
+                                }
+                            }
+                        }, 2000); // Total: 2 secondes au lieu de 4.6 secondes
+                    } else {
+                        // En mode skip (initialisation), ne pas jouer l'audio
+                        if (tonePlayer && tonePlayer.state === 'started') {
+                            tonePlayer.stop();
+                        }
+                    }
+
+                } else { // STOP (rpm = 0)
+                    currentSpeedDuration = 0;
+                    isRunning = false;
+                    baseRotation = 10;
+
+                    // Arrêter l'audio Tone.js
+                    if (tonePlayer && tonePlayer.state === 'started') {
+                        tonePlayer.stop();
+                    }
+
+                    currentArmPosition = null;
+                    if (animationFrameId) {
+                        cancelAnimationFrame(animationFrameId);
+                        animationFrameId = null;
+                    }
+
+                    if (!skipAnimation && armState !== 'rest') {
+                        // Séquence : Playing/Current -> Lifted -> Rest (mouvements rapides)
+                        const currentAngle = currentArmPosition || ARM_START_Z_ANGLE;
+                        setTimeout(() => {
+                            moveTonearmToPosition(currentAngle, ARM_HEIGHT_LIFTED); // Lever le bras
+                        }, 100);
+
+                        setTimeout(() => {
+                            moveTonearmToPosition(ARM_REST_Z_ANGLE, ARM_HEIGHT_LIFTED); // Déplacer au-dessus du repos
+                        }, 700);
+
+                        setTimeout(() => {
+                            moveTonearmToPosition(ARM_REST_Z_ANGLE, ARM_HEIGHT_REST); // Poser sur le repos
+                        }, 1300);
+                    }
+                }
+
+                selectorBase.style.transform = `rotateZ(${baseRotation}deg)`;
+                button.classList.add('active');
+
+                updateAnimation();
+            }
+
+            // Événements
+            set33Btn.addEventListener('click', () => setSpeedAndKnob(RPM_33, set33Btn));
+            setStopBtn.addEventListener('click', () => setSpeedAndKnob(0, setStopBtn));
+            set45Btn.addEventListener('click', () => setSpeedAndKnob(RPM_45, set45Btn));
+
+            // Ouvrir l'overlay au clic sur le speed selector
+            selectorContainer.addEventListener('click', () => {
+                speedOverlay.classList.add('active');
+            });
+
+            // Fermer l'overlay en cliquant en dehors du panel
+            speedOverlay.addEventListener('click', (e) => {
+                if (e.target === speedOverlay) {
+                    speedOverlay.classList.remove('active');
+                }
+            });
+
+            // Gérer la sélection de vitesse dans l'overlay
+            speedOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    const speed = option.dataset.speed;
+                    let rpm;
+                    let btn;
+
+                    if (speed === '33') {
+                        rpm = RPM_33;
+                        btn = set33Btn;
+                    } else if (speed === '45') {
+                        rpm = RPM_45;
+                        btn = set45Btn;
+                    } else {
+                        rpm = 0;
+                        btn = setStopBtn;
+                    }
+
+                    // Mettre à jour la sélection visuelle
+                    speedOptions.forEach(opt => opt.classList.remove('selected'));
+                    option.classList.add('selected');
+
+                    // Appliquer la vitesse
+                    setSpeedAndKnob(rpm, btn);
+
+                    // Fermer l'overlay
+                    speedOverlay.classList.remove('active');
+                });
+            });
+
+            pitchSlider.addEventListener('input', () => {
+                if (isRunning) {
+                    // Le pitch affecte la durée du morceau, donc l'animation du bras
+                    // Vous devrez recalculer ARM_TOTAL_PLAY_DURATION_SECONDS ici si vous voulez que le pitch l'affecte.
+                    updateAnimation();
+                    updateAudioPlaybackRate();
+                }
+            });
+
+            directionBtn.addEventListener('click', () => {
+                isReversed = !isReversed;
+                directionBtn.classList.toggle('active', isReversed);
+                directionBtn.textContent = isReversed ? 'Direction (Forward)' : 'Direction (Reverse)';
+                updateAnimation();
+            });
+
+            // Gestionnaires d'événements pour le scratching
+            vinyl.addEventListener('mousedown', (e) => {
+                // Permettre le scratch même quand la musique ne joue pas (manipulation manuelle)
+
+                isScratching = true;
+                vinyl.classList.add('scratching');
+                scratchStartAngle = getAngleFromCenter(e.clientX, e.clientY, recordContainer);
+                scratchLastAngle = scratchStartAngle;
+                lastScratchTime = Date.now();
+
+                // Désactiver le drag 3D de la scène pendant le scratch
+                isDragging = false;
+                scene.style.cursor = 'default'; // Curseur normal pendant le scratch
+
+                // Démarrer le scratch audio granulaire seulement si la musique joue
+                if (isRunning) {
+                    audioScratcher.startScratch(audioElement.currentTime);
+                    // Mettre en pause l'audio HTML (le scratcher prend le relais)
+                    audioElement.pause();
+                }
+
+                // Sauvegarder la rotation actuelle
+                const transform = window.getComputedStyle(vinyl).transform;
+                if (transform !== 'none') {
+                    const matrix = new DOMMatrix(transform);
+                    scratchRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
+                } else {
+                    scratchRotation = 0;
+                }
+
+                previousScratchRotation = scratchRotation; // Initialiser previousScratchRotation
+
+                // CRUCIAL: Désactiver l'animation CSS pour que le transform JS prenne le dessus complètement
+                vinyl.style.animation = 'none';
+
+                // === ABSOLUTE SYNC ANCHOR ===
+                // Mémoriser l'état EXACT au début du clic
+                anchorRotation = scratchRotation;
+                anchorAudioTime = audioScratcher.getPosition();
+
+                // Initialiser lastMoveTime pour éviter le decay immédiat
+                lastMoveTime = Date.now();
+
+                // Démarrer la boucle d'animation si pas déjà active
+                if (!scratchAnimationFrame) {
+                    scratchAnimationFrame = requestAnimationFrame(applyScratch);
+                }
+
+                e.preventDefault();
+                e.stopPropagation();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isScratching) return;
+
+                const currentAngle = getAngleFromCenter(e.clientX, e.clientY, recordContainer);
+                const angleDelta = normalizeAngleDelta(currentAngle - scratchLastAngle);
+
+                const currentTime = Date.now();
+                const timeDelta = Math.max(1, currentTime - lastScratchTime);
+
+                // Calculer la vélocité (degrés par milliseconde) avec suivi ultra-précis
+                const rawVelocity = angleDelta / timeDelta * 16.67; // Normaliser à ~60fps
+                scratchVelocity = rawVelocity; // Suivi direct pour réactivité maximale
+
+                // MISE À JOUR IMMÉDIATE: Rotation suit directement le pointeur (1:1, sans résistance)
+                scratchRotation += angleDelta;
+                vinyl.style.transform = `translate(-50%, -50%) rotateZ(${scratchRotation}deg)`;
+                vinyl.style.transition = 'none';
+                vinyl.style.willChange = 'transform'; // Optimisation GPU
+
+                scratchLastAngle = currentAngle;
+                // lastScratchTime = currentTime; // Déjà calculé plus haut
+
+                // Mettre à jour le timestamp de mouvement pour empêcher le "Ghost Playback decay"
+                lastMoveTime = Date.now();
+
+                // Afficher l'indicateur avec la vitesse normalisée
+                const speedDisplay = Math.abs(rawVelocity / 6); // Normaliser pour affichage
+                updateScratchIndicator(speedDisplay);
+
+                e.preventDefault();
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isScratching) {
+                    isScratching = false;
+                    vinyl.classList.remove('scratching');
+
+                    // Restaurer le curseur de la scène
+                    scene.style.cursor = 'grab';
+
+                    // Arrêter le scratch audio granulaire Tone.js
+                    audioScratcher.stopScratch();
+
+                    // La physique de "retour à la vitesse" est gérée par la boucle applyScratch
+                    // On ne fait rien d'autre ici
+                }
+            });
+
+            // Gestion tactile pour le scratching
+            vinyl.addEventListener('touchstart', (e) => {
+                // Permettre le scratch même quand la musique ne joue pas
+
+                isScratching = true;
+                vinyl.classList.add('scratching');
+                const touch = e.touches[0];
+                scratchStartAngle = getAngleFromCenter(touch.clientX, touch.clientY, recordContainer);
+                scratchLastAngle = scratchStartAngle;
+                lastScratchTime = Date.now();
+
+                // Désactiver le drag 3D de la scène pendant le scratch
+                isDragging = false;
+
+                // Démarrer le scratch audio granulaire seulement si la musique joue
+                if (isRunning) {
+                    audioScratcher.startScratch(audioElement.currentTime);
+                    audioElement.pause();
+                }
+
+                const transform = window.getComputedStyle(vinyl).transform;
+                if (transform !== 'none') {
+                    const matrix = new DOMMatrix(transform);
+                    scratchRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
+                } else {
+                    scratchRotation = 0;
+                }
+
+                previousScratchRotation = scratchRotation; // Initialiser previousScratchRotation
+
+                // CRUCIAL: Désactiver l'animation CSS pour que le transform JS prenne le dessus complètement
+                vinyl.style.animation = 'none';
+
+                // === ABSOLUTE SYNC ANCHOR ===
+                // Mémoriser l'état EXACT au début du clic
+                anchorRotation = scratchRotation;
+                anchorAudioTime = audioScratcher.getPosition();
+
+                // Initialiser lastMoveTime pour éviter le decay immédiat
+                lastMoveTime = Date.now();
+
+                if (!scratchAnimationFrame) {
+                    scratchAnimationFrame = requestAnimationFrame(applyScratch);
+                }
+
+                e.preventDefault();
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                if (!isScratching) return;
+
+                const touch = e.touches[0];
+                const currentAngle = getAngleFromCenter(touch.clientX, touch.clientY, recordContainer);
+                const angleDelta = normalizeAngleDelta(currentAngle - scratchLastAngle);
+
+                const currentTime = Date.now();
+                const timeDelta = Math.max(1, currentTime - lastScratchTime);
+
+                const rawVelocity = angleDelta / timeDelta * 16.67;
+                scratchVelocity = rawVelocity;
+
+                // MISE À JOUR IMMÉDIATE: Rotation suit directement le pointeur (1:1, sans résistance)
+                scratchRotation += angleDelta;
+                vinyl.style.transform = `translate(-50%, -50%) rotateZ(${scratchRotation}deg)`;
+                vinyl.style.transition = 'none';
+                vinyl.style.willChange = 'transform'; // Optimisation GPU
+
+                scratchLastAngle = currentAngle;
+                // lastScratchTime = currentTime; 
+
+                lastMoveTime = Date.now();
+
+                const speedDisplay = Math.abs(rawVelocity / 6);
+                updateScratchIndicator(speedDisplay);
+
+                e.preventDefault();
+            });
+
+            document.addEventListener('touchend', () => {
+                if (isScratching) {
+                    isScratching = false;
+                    vinyl.classList.remove('scratching');
+                    audioScratcher.stopScratch();
+                    // La physique est gérée par applyScratch
+                }
+            });
+
+            // Helper pour restaurer l'animation (Clean Code)
+            function restoreAnimation() {
+                vinyl.style.transform = '';
+                vinyl.style.transition = '';
+
+                vinyl.style.animationName = isReversed ? 'spin-reverse' : 'spin';
+
+                const currentCyclePosition = (scratchRotation % 360 + 360) % 360;
+                const cycleCompleteRatio = currentCyclePosition / 360;
+
+                const animationDuration = parseFloat(getComputedStyle(vinyl).animationDuration) || 0;
+
+                if (isReversed) {
+                    vinyl.style.animationDelay = `-${(1 - cycleCompleteRatio) * animationDuration}s`;
+                } else {
+                    vinyl.style.animationDelay = `-${cycleCompleteRatio * animationDuration}s`;
+                }
+
+                vinyl.style.animationPlayState = 'running';
+
+                if (tonePlayer && audioScratcher.isInitialized) {
+                    const currentPos = audioScratcher.getPosition();
+                    tonePlayer.start('+0', currentPos);
+                }
+                updateAudioPlaybackRate();
+            }
+
+            // Mettre à jour les marqueurs lors du redimensionnement
+            window.addEventListener('resize', updateArmMarkers);
+
+            // Initialisation à l'arrêt
+            setSpeedAndKnob(0, setStopBtn, true); // skipAnimation = true pour l'initialisation
+            updateAnimation(); // Initialiser la position du pitch knob
+            moveTonearmToPosition(ARM_REST_Z_ANGLE, ARM_HEIGHT_REST); // Position initiale sur le repos
+        });
+    </script>
+</body>
+
+</html>

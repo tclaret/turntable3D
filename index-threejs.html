@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Platine 3D - Three.js avec Quadrillage</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            touch-action: none;
+        }
+        
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+        
+        .controls-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            min-width: 250px;
+            transition: transform 0.3s ease;
+        }
+        
+        .controls-panel.hidden {
+            transform: translateX(-120%);
+        }
+        
+        .toggle-panel-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(192, 57, 43, 0.9);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 20px;
+            z-index: 1001;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+        
+        .toggle-panel-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #aaa;
+        }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-right: 5px;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        
+        .btn.active {
+            background: #c0392b;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin-top: 5px;
+        }
+        
+        .info {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #444;
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <button class="toggle-panel-btn" id="togglePanel">☰</button>
+    
+    <div id="canvas-container"></div>
+    
+    <div class="controls-panel">
+        <h3 style="margin-bottom: 15px;">🎵 Platine 3D</h3>
+        
+        <div class="control-group">
+            <label>Vitesse</label>
+            <button class="btn" id="btn33">33 RPM</button>
+            <button class="btn active" id="btnStop">STOP</button>
+            <button class="btn" id="btn45">45 RPM</button>
+        </div>
+        
+        <div class="control-group">
+            <label>Direction</label>
+            <button class="btn" id="btnDirection">⟲ Normale</button>
+        </div>
+        
+        <div class="control-group">
+            <label>Pitch: <span id="pitchValue">1.00</span>x</label>
+            <input type="range" id="pitchSlider" min="0.5" max="1.5" step="0.01" value="1.0">
+        </div>
+        
+        <div class="control-group checkbox-group">
+            <input type="checkbox" id="gridToggle" checked>
+            <label for="gridToggle" style="margin: 0;">Afficher quadrillage</label>
+        </div>
+        
+        <div class="control-group checkbox-group">
+            <input type="checkbox" id="axesToggle" checked>
+            <label for="axesToggle" style="margin: 0;">Afficher axes</label>
+        </div>
+        
+        <div class="control-group checkbox-group">
+            <input type="checkbox" id="pointsToggle" checked>
+            <label for="pointsToggle" style="margin: 0;">Afficher quadrillage détaillé</label>
+        </div>
+        
+        <div class="info">
+            <strong>Navigation :</strong><br>
+            🖱️ Clic gauche : Rotation<br>
+            🖱️ Clic droit : Pan<br>
+            🖱️ Molette : Zoom<br>
+            <br>
+            📍 Point rouge : (-2, 1, 0.5)<br>
+            📍 Point bleu : (3, -1, 0)
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <script>
+        // === CONFIGURATION ===
+        const RPM_33 = 33.33;
+        const RPM_45 = 45;
+        
+        // === SCÈNE THREE.JS ===
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x333333);
+        
+        const camera = new THREE.PerspectiveCamera(
+            60,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(15, 12, 15);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+        
+        // === CONTRÔLES ===
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(0, 0, 0);
+        controls.enableZoom = true;
+        controls.enablePan = true;
+        controls.enableRotate = true;
+        controls.touches = {
+            ONE: THREE.TOUCH.ROTATE,
+            TWO: THREE.TOUCH.DOLLY_PAN
+        };
+        controls.mouseButtons = {
+            LEFT: THREE.MOUSE.ROTATE,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.PAN
+        };
+        
+        // === LUMIÈRES ===
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 20, 10);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        scene.add(directionalLight);
+        
+        const pointLight = new THREE.PointLight(0x667eea, 0.5);
+        pointLight.position.set(-10, 10, -10);
+        scene.add(pointLight);
+        
+        // === QUADRILLAGE 3D ===
+        const debugGroup = new THREE.Group();
+        
+        // Grille principale XZ (sol)
+        const gridHelper = new THREE.GridHelper(20, 20, 0x00d4ff, 0x444444);
+        debugGroup.add(gridHelper);
+        
+        // Quadrillage vertical XY
+        const gridXY = new THREE.GridHelper(20, 20, 0xff00ff, 0x444444);
+        gridXY.rotation.x = Math.PI / 2;
+        debugGroup.add(gridXY);
+        
+        // Quadrillage vertical YZ
+        const gridYZ = new THREE.GridHelper(20, 20, 0x00ff00, 0x444444);
+        gridYZ.rotation.z = Math.PI / 2;
+        debugGroup.add(gridYZ);
+        
+        scene.add(debugGroup);
+        
+        // === AXES DE COORDONNÉES ===
+        const axesGroup = new THREE.Group();
+        
+        const axesHelper = new THREE.AxesHelper(12);
+        axesGroup.add(axesHelper);
+        
+        // Fonction pour créer des labels de texte
+        const createTextLabel = (text, position, color, size = 1) => {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 256;
+            context.fillStyle = color;
+            context.font = 'Bold 120px Arial';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, 128, 128);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.position.copy(position);
+            sprite.scale.set(size, size, size);
+            return sprite;
+        };
+        
+        // Labels des axes principaux
+        const labelX = createTextLabel('X', new THREE.Vector3(12, 0, 0), '#ff0000', 1.5);
+        const labelY = createTextLabel('Y', new THREE.Vector3(0, 12, 0), '#00ff00', 1.5);
+        const labelZ = createTextLabel('Z', new THREE.Vector3(0, 0, 12), '#0000ff', 1.5);
+        axesGroup.add(labelX, labelY, labelZ);
+        
+        // Graduation sur l'axe X
+        for (let i = -10; i <= 10; i++) {
+            if (i === 0) continue;
+            const label = createTextLabel(i.toString(), new THREE.Vector3(i, 0, 0.5), '#ff6666', 0.5);
+            axesGroup.add(label);
+            
+            // Petite ligne de graduation
+            const tickGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(i, -0.2, 0),
+                new THREE.Vector3(i, 0.2, 0)
+            ]);
+            const tickMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+            const tick = new THREE.Line(tickGeometry, tickMaterial);
+            axesGroup.add(tick);
+        }
+        
+        // Graduation sur l'axe Y
+        for (let i = -10; i <= 10; i++) {
+            if (i === 0) continue;
+            const label = createTextLabel(i.toString(), new THREE.Vector3(0.5, i, 0), '#66ff66', 0.5);
+            axesGroup.add(label);
+            
+            const tickGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(-0.2, i, 0),
+                new THREE.Vector3(0.2, i, 0)
+            ]);
+            const tickMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+            const tick = new THREE.Line(tickGeometry, tickMaterial);
+            axesGroup.add(tick);
+        }
+        
+        // Graduation sur l'axe Z
+        for (let i = -10; i <= 10; i++) {
+            if (i === 0) continue;
+            const label = createTextLabel(i.toString(), new THREE.Vector3(0.5, 0, i), '#6666ff', 0.5);
+            axesGroup.add(label);
+            
+            const tickGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(-0.2, 0, i),
+                new THREE.Vector3(0.2, 0, i)
+            ]);
+            const tickMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
+            const tick = new THREE.Line(tickGeometry, tickMaterial);
+            axesGroup.add(tick);
+        }
+        
+        // Label origine (0,0,0)
+        const originLabel = createTextLabel('0', new THREE.Vector3(0.5, 0.5, 0.5), '#ffffff', 0.6);
+        axesGroup.add(originLabel);
+        
+        // === POINTS D'INTERSECTION DES GRILLES ===
+        const intersectionPointsGroup = new THREE.Group();
+        
+        // Créer des lignes de quadrillage détaillées
+        const lineMaterial = new THREE.LineBasicMaterial({ 
+            color: 0xffaa00,
+            transparent: false,
+            opacity: 1.0
+        });
+        
+        // Lignes horizontales sur le plan XZ (parallèles à X)
+        for (let z = -10; z <= 10; z += 1) {
+            const points = [];
+            for (let x = -10; x <= 10; x += 1) {
+                points.push(new THREE.Vector3(x, 0, z));
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(geometry, lineMaterial);
+            intersectionPointsGroup.add(line);
+        }
+        
+        // Lignes verticales sur le plan XZ (parallèles à Z)
+        for (let x = -10; x <= 10; x += 1) {
+            const points = [];
+            for (let z = -10; z <= 10; z += 1) {
+                points.push(new THREE.Vector3(x, 0, z));
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(geometry, lineMaterial);
+            intersectionPointsGroup.add(line);
+        }
+        
+        // Lignes sur le plan XY (parallèles à X)
+        for (let y = 0; y <= 10; y += 1) {
+            const points = [];
+            for (let x = -10; x <= 10; x += 1) {
+                points.push(new THREE.Vector3(x, y, 0));
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(geometry, lineMaterial);
+            intersectionPointsGroup.add(line);
+        }
+        
+        // Lignes sur le plan XY (parallèles à Y)
+        for (let x = -10; x <= 10; x += 1) {
+            const points = [];
+            for (let y = 0; y <= 10; y += 1) {
+                points.push(new THREE.Vector3(x, y, 0));
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(geometry, lineMaterial);
+            intersectionPointsGroup.add(line);
+        }
+        
+        // Lignes sur le plan YZ (parallèles à Y)
+        for (let z = -10; z <= 10; z += 1) {
+            const points = [];
+            for (let y = 0; y <= 10; y += 1) {
+                points.push(new THREE.Vector3(0, y, z));
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(geometry, lineMaterial);
+            intersectionPointsGroup.add(line);
+        }
+        
+        // Lignes sur le plan YZ (parallèles à Z)
+        for (let y = 0; y <= 10; y += 1) {
+            const points = [];
+            for (let z = -10; z <= 10; z += 1) {
+                points.push(new THREE.Vector3(0, y, z));
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(geometry, lineMaterial);
+            intersectionPointsGroup.add(line);
+        }
+        
+        console.log('Nombre de lignes de quadrillage créées:', intersectionPointsGroup.children.length);
+        scene.add(intersectionPointsGroup);
+        
+        scene.add(axesGroup);
+        
+        // === BASE DE LA PLATINE ===
+        const baseGeometry = new THREE.BoxGeometry(12, 1, 10);
+        const baseMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x333333,
+            metalness: 0.5,
+            roughness: 0.5
+        });
+        const base = new THREE.Mesh(baseGeometry, baseMaterial);
+        base.position.y = 0;
+        base.castShadow = true;
+        base.receiveShadow = true;
+        scene.add(base);
+        
+        // Plateau tournant
+        const platterGeometry = new THREE.CylinderGeometry(4.2, 4.2, 0.3, 64);
+        const platterMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x555555,
+            metalness: 0.7,
+            roughness: 0.3
+        });
+        const platter = new THREE.Mesh(platterGeometry, platterMaterial);
+        platter.position.set(0, 0.65, 0);
+        platter.castShadow = true;
+        platter.receiveShadow = true;
+        scene.add(platter);
+        
+        // === DISQUE VINYLE ===
+        const vinylGeometry = new THREE.CylinderGeometry(4, 4, 0.1, 64);
+        const vinylMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x1a1a1a,
+            metalness: 0.3,
+            roughness: 0.7
+        });
+        const vinyl = new THREE.Mesh(vinylGeometry, vinylMaterial);
+        vinyl.position.set(0, 0.85, 0);
+        vinyl.castShadow = true;
+        vinyl.receiveShadow = true;
+        scene.add(vinyl);
+        
+        // Label central du disque
+        const labelGeometry = new THREE.CylinderGeometry(1, 1, 0.11, 32);
+        const labelMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xc0392b,
+            metalness: 0.8,
+            roughness: 0.2
+        });
+        const label = new THREE.Mesh(labelGeometry, labelMaterial);
+        label.position.set(0, 0.9, 0);
+        scene.add(label);
+        
+        // Sillons du disque (anneaux)
+        for (let i = 1.5; i < 4; i += 0.15) {
+            const grooveGeometry = new THREE.TorusGeometry(i, 0.01, 8, 64);
+            const grooveMaterial = new THREE.MeshBasicMaterial({ color: 0x0a0a0a });
+            const groove = new THREE.Mesh(grooveGeometry, grooveMaterial);
+            groove.position.set(0, 0.91, 0);
+            groove.rotation.x = Math.PI / 2;
+            scene.add(groove);
+        }
+        
+        // === BRAS DE LECTURE ===
+        const armGroup = new THREE.Group();
+        armGroup.position.set(3, 0.5, -1); // Position (3, -1, 0) - base au niveau du socle
+        scene.add(armGroup);
+        
+        // Base du bras (pivot)
+        const pivotGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.4, 32);
+        const pivotMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x444444,
+            metalness: 0.8,
+            roughness: 0.2
+        });
+        const pivot = new THREE.Mesh(pivotGeometry, pivotMaterial);
+        pivot.castShadow = true;
+        armGroup.add(pivot);
+        
+        // Bras (parallèle à Y négatif au repos = rotation de 180° autour de Y)
+        const armGeometry = new THREE.BoxGeometry(0.2, 3, 0.15);
+        const armMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xdddddd,
+            metalness: 0.6,
+            roughness: 0.3
+        });
+        const arm = new THREE.Mesh(armGeometry, armMaterial);
+        arm.position.set(0, 0, 1.5); // Déplacé vers Y négatif (Z positif en Three.js)
+        arm.castShadow = true;
+        armGroup.add(arm);
+        
+        // Tête de lecture
+        const headGeometry = new THREE.SphereGeometry(0.15, 16, 16);
+        const headMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffaa00,
+            metalness: 0.9,
+            roughness: 0.1
+        });
+        const head = new THREE.Mesh(headGeometry, headMaterial);
+        head.position.set(0, 0, 3);
+        head.castShadow = true;
+        armGroup.add(head);
+        
+        // === POINTS DE REPÈRE ===
+        // Point rouge (-2, 1, 0.5)
+        const redPointGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+        const redPointMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xff0000,
+            emissive: 0xff0000,
+            emissiveIntensity: 0.5
+        });
+        const redPoint = new THREE.Mesh(redPointGeometry, redPointMaterial);
+        redPoint.position.set(-2, 1, 1); // Position (-2, 1, 0.5) -> Y=1 en hauteur
+        scene.add(redPoint);
+        
+        // Croix rouge
+        const redCrossGroup = new THREE.Group();
+        redCrossGroup.position.copy(redPoint.position);
+        const crossMaterial = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 2 });
+        const createCross = (size) => {
+            const points1 = [
+                new THREE.Vector3(-size, 0, 0),
+                new THREE.Vector3(size, 0, 0)
+            ];
+            const points2 = [
+                new THREE.Vector3(0, -size, 0),
+                new THREE.Vector3(0, size, 0)
+            ];
+            const points3 = [
+                new THREE.Vector3(0, 0, -size),
+                new THREE.Vector3(0, 0, size)
+            ];
+            const geo1 = new THREE.BufferGeometry().setFromPoints(points1);
+            const geo2 = new THREE.BufferGeometry().setFromPoints(points2);
+            const geo3 = new THREE.BufferGeometry().setFromPoints(points3);
+            return [
+                new THREE.Line(geo1, crossMaterial),
+                new THREE.Line(geo2, crossMaterial),
+                new THREE.Line(geo3, crossMaterial)
+            ];
+        };
+        createCross(0.5).forEach(line => redCrossGroup.add(line));
+        scene.add(redCrossGroup);
+        
+        // Point bleu (3, -1, 0) -> (3, 0, -1) en Three.js
+        const bluePointGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+        const bluePointMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x0000ff,
+            emissive: 0x0000ff,
+            emissiveIntensity: 0.5
+        });
+        const bluePoint = new THREE.Mesh(bluePointGeometry, bluePointMaterial);
+        bluePoint.position.set(3, 0.5, -1); // Position (3, -1, 0) -> Y=0.5 au niveau du socle
+        scene.add(bluePoint);
+        
+        // Croix bleue
+        const blueCrossGroup = new THREE.Group();
+        blueCrossGroup.position.copy(bluePoint.position);
+        const blueCrossMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff, linewidth: 2 });
+        const createBlueCross = (size) => {
+            const points1 = [
+                new THREE.Vector3(-size, 0, 0),
+                new THREE.Vector3(size, 0, 0)
+            ];
+            const points2 = [
+                new THREE.Vector3(0, -size, 0),
+                new THREE.Vector3(0, size, 0)
+            ];
+            const points3 = [
+                new THREE.Vector3(0, 0, -size),
+                new THREE.Vector3(0, 0, size)
+            ];
+            const geo1 = new THREE.BufferGeometry().setFromPoints(points1);
+            const geo2 = new THREE.BufferGeometry().setFromPoints(points2);
+            const geo3 = new THREE.BufferGeometry().setFromPoints(points3);
+            return [
+                new THREE.Line(geo1, blueCrossMaterial),
+                new THREE.Line(geo2, blueCrossMaterial),
+                new THREE.Line(geo3, blueCrossMaterial)
+            ];
+        };
+        createBlueCross(0.5).forEach(line => blueCrossGroup.add(line));
+        scene.add(blueCrossGroup);
+        
+        // === VARIABLES D'ANIMATION ===
+        let currentRPM = 0;
+        let isPlaying = false;
+        let direction = 1;
+        let pitchMultiplier = 1.0;
+        let armStartTime = null;
+        const ARM_ANIMATION_DURATION = 120; // secondes
+        const ARM_START_ANGLE = Math.PI; // 180° (parallèle à Y négatif)
+        const ARM_END_ANGLE = Math.PI + (5 * Math.PI / 180); // 185° (5° clockwise)
+        
+        // === CONTRÔLES UI ===
+        const btn33 = document.getElementById('btn33');
+        const btnStop = document.getElementById('btnStop');
+        const btn45 = document.getElementById('btn45');
+        const btnDirection = document.getElementById('btnDirection');
+        const pitchSlider = document.getElementById('pitchSlider');
+        const pitchValue = document.getElementById('pitchValue');
+        const gridToggle = document.getElementById('gridToggle');
+        const axesToggle = document.getElementById('axesToggle');
+        const pointsToggle = document.getElementById('pointsToggle');
+        
+        const setSpeed = (rpm, activeBtn) => {
+            currentRPM = rpm;
+            isPlaying = rpm > 0;
+            
+            [btn33, btnStop, btn45].forEach(btn => btn.classList.remove('active'));
+            activeBtn.classList.add('active');
+            
+            if (isPlaying) {
+                armStartTime = Date.now();
+            } else {
+                armStartTime = null;
+                armGroup.rotation.y = ARM_START_ANGLE;
+            }
+        };
+        
+        btn33.addEventListener('click', () => setSpeed(RPM_33, btn33));
+        btnStop.addEventListener('click', () => setSpeed(0, btnStop));
+        btn45.addEventListener('click', () => setSpeed(RPM_45, btn45));
+        
+        btnDirection.addEventListener('click', () => {
+            direction *= -1;
+            btnDirection.textContent = direction === 1 ? '⟲ Normale' : '⟳ Inverse';
+        });
+        
+        pitchSlider.addEventListener('input', (e) => {
+            pitchMultiplier = parseFloat(e.target.value);
+            pitchValue.textContent = pitchMultiplier.toFixed(2);
+        });
+        
+        gridToggle.addEventListener('change', (e) => {
+            debugGroup.visible = e.target.checked;
+        });
+        
+        axesToggle.addEventListener('change', (e) => {
+            axesGroup.visible = e.target.checked;
+        });
+        
+        pointsToggle.addEventListener('change', (e) => {
+            intersectionPointsGroup.visible = e.target.checked;
+        });
+        
+        // === BOUCLE D'ANIMATION ===
+        let lastTime = Date.now();
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const currentTime = Date.now();
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+            
+            // Rotation du disque
+            if (isPlaying) {
+                const rotationSpeed = (currentRPM / 60) * 2 * Math.PI * direction * pitchMultiplier;
+                vinyl.rotation.y += rotationSpeed * deltaTime;
+                label.rotation.y += rotationSpeed * deltaTime;
+                
+                // Animation du bras
+                const elapsedTime = (currentTime - armStartTime) / 1000;
+                if (elapsedTime < ARM_ANIMATION_DURATION) {
+                    const progress = elapsedTime / ARM_ANIMATION_DURATION;
+                    armGroup.rotation.y = ARM_START_ANGLE + (ARM_END_ANGLE - ARM_START_ANGLE) * progress;
+                } else {
+                    armGroup.rotation.y = ARM_END_ANGLE;
+                }
+            }
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        // === RESPONSIVE ===
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // === TOGGLE PANNEAU ===
+        const togglePanelBtn = document.getElementById('togglePanel');
+        const controlsPanel = document.querySelector('.controls-panel');
+        
+        togglePanelBtn.addEventListener('click', () => {
+            controlsPanel.classList.toggle('hidden');
+            togglePanelBtn.textContent = controlsPanel.classList.contains('hidden') ? '☰' : '✕';
+        });
+        
+        // Masquer automatiquement le panneau sur mobile au démarrage
+        if (window.innerWidth < 768) {
+            controlsPanel.classList.add('hidden');
+            togglePanelBtn.textContent = '☰';
+        }
+        
+        animate();
+    </script>
+</body>
+</html>

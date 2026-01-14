@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Scrating Vinyl!.. v29 - Correction Finale Audio</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Creepster&display=swap" rel="stylesheet">
+
+<style>
+    /* Configuration du fond et de la police */
+    html, body { margin: 0; padding: 0; }
+    body {
+        font-family: 'Inter', sans-serif; background-color: #1a1a2e; color: #ffffff;
+        height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; 
+    }
+    /* Le conteneur principal de la platine */
+    #turntable-container {
+        position: relative; width: 85vmin; height: 85vmin; max-width: 960px; max-height: 960px;
+        background: #634b32; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); overflow: hidden; z-index: 100; 
+    }
+    /* Styles pour le VINYL */
+    #vinyl-image {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+        width: 96%; height: 96%; border-radius: 50%; background-image: url('https://tclaret.github.io/turntable/img/DISC.png');
+        background-size: cover; background-position: center; border: 2px solid #111;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 0 20px rgba(0, 0, 0, 0.9); z-index: 10; cursor: grab;
+        transition: left 0.5s ease-in-out, width 0.5s ease-in-out, height 0.5s ease-in-out; 
+    }
+    /* Classes dynamiques pour le mode Scratch */
+    .vinyl-scratch-desktop { left: 62.5% !important; }
+    .vinyl-scratch-mobile { left: 70% !important; width: 140% !important; height: 140% !important; }
+    /* CONTROLES UNIFIÉS (Haut-Gauche) */
+    .control-panel { position: absolute; top: 20px; left: 20px; display: flex; flex-wrap: wrap; gap: 10px; z-index: 60; background: rgba(0, 0, 0, 0.6); padding: 8px 12px; border-radius: 8px; max-width: 70%; }
+    .vintage-btn { padding: 8px 12px; border: 1px solid #555; border-radius: 4px; background: linear-gradient(to bottom, #e0e0e0 0%, #b0b0b0 100%); color: #333; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); white-space: nowrap; min-width: 40px; text-align: center; }
+    .vintage-btn:active { transform: translateY(1px); background: linear-gradient(to bottom, #b0b0b0 0%, #999 100%); }
+    .vintage-btn.reverse-active { background: linear-gradient(to bottom, #ff9999 0%, #cc0000 100%); color: white; text-shadow: 0 1px 3px rgba(0,0,0,1); font-family: 'Creepster', cursive; font-size: 14px; letter-spacing: 1px; border-color: #600; transform: rotate(-15deg); margin: 0 5px; box-shadow: 3px 3px 6px rgba(0,0,0,0.7); }
+    /* OVERLAY (Haut-Droit) */
+    #overlay-box { position: absolute; top: 20px; right: 20px; padding: 10px 15px; background-color: rgba(60, 60, 80, 0.85); border-radius: 6px; display: flex; justify-content: center; align-items: center; z-index: 55; transition: opacity 0.5s ease-out; border: 1px solid rgba(255,255,255,0.1); }
+    .overlay-hidden { opacity: 0; pointer-events: none; }
+    #current-rpm-display { font-size: 18px; font-weight: bold; letter-spacing: 1px; color: #fff; text-shadow: 0 0 5px rgba(0,0,0,0.5); margin: 0; }
+    #status-indicator { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 15px 30px; background-color: rgba(20, 20, 30, 0.95); border: 3px solid #ffcc00; border-radius: 10px; color: #ffcc00; font-size: 1.2em; font-weight: bold; text-align: center; z-index: 1000; }
+    .hidden { display: none; }
+    /* STYLES RPM (Bas-Gauche) */
+    #rpm-wrapper { position: absolute; bottom: 30px; left: 30px; width: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 50; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); transition: left 0.5s ease-in-out, padding 0.3s ease; }
+    .rpm-scratch-centered { left: 15% !important; }
+    .rpm-labels { display:flex; justify-content:space-between; width: 100px; font-size: 11px; font-family: sans-serif; font-weight: bold; color: #d0d0d0; text-shadow: 0 1px 2px black; pointer-events: none; }
+    #rpm-controls { display:flex; justify-content:space-between; width: 100px; position: relative; }
+    .rpm-choice { width: 18px; height: 18px; border-radius: 50%; background: #444; border: 2px solid #222; cursor: pointer; box-shadow: inset 0 2px 3px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.2); transition: background 0.2s; margin: 0 auto; }
+    .rpm-choice.active { background: #00ff00; box-shadow: 0 0 10px #00ff00, inset 0 2px 3px rgba(0,0,0,0.5); border-color: #003300; }
+    #rpm-img { width: 40px; height: auto; display: block; transform-origin: center center; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); filter: drop-shadow(0 5px 5px rgba(0,0,0,0.7)); cursor: pointer; }
+    /* PITCH CONTROL (Bas-Droite) */
+    #pitch-wrapper { position: absolute; bottom: 30px; right: 30px; width: 180px; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); z-index: 50; transition: right 0.5s ease-in-out; }
+    .pitch-scratch-centered { right: 25% !important; }
+    #pitch-slider { -webkit-appearance: none; width: 100%; height: 8px; background: #444; border-radius: 4px; outline: none; cursor: pointer; }
+    #pitch-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 32px; border-radius: 4px; background: #00bcd4; cursor: pointer; box-shadow: 0 0 5px rgba(0, 188, 212, 0.8), inset 0 1px 3px rgba(255,255,255,0.4); }
+    #pitch-scale { position: relative; height: 15px; margin-top: 8px; }
+    .pitch-mark { position: absolute; top: 0; height: 100%; display: flex; flex-direction: column; align-items: center; color: #aaa; font-size: 10px; font-weight: bold; }
+    .pitch-mark::before { content: '|'; display: block; line-height: 1; font-size: 10px; height: 5px; }
+    .pitch-mark.center { color: #00ff00; }
+    #mark-neg-10 { left: 0%; transform: translateX(-50%); }
+    #mark-neg-05 { left: 25%; transform: translateX(-50%); }
+    #mark-zero { left: 50%; transform: translateX(-50%); }
+    #mark-pos-05 { left: 75%; transform: translateX(-50%); }
+    #mark-pos-10 { left: 100%; transform: translateX(-50%); }
+    /* MOBILE (< 768px) */
+    @media (max-width: 768px) {
+        .control-panel { top: 15px; left: 15px; gap: 8px; padding: 6px; }
+        .vintage-btn { padding: 6px 10px; font-size: 11px; }
+        #rpm-wrapper { bottom: 20px; left: 15px; transform: scale(0.9); transform-origin: bottom left; }
+        #pitch-wrapper { bottom: 20px; right: 15px; transform: scale(0.9); transform-origin: bottom right; width: 150px; }
+        #overlay-box { top: 15px; right: 15px; padding: 6px 10px; }
+        #current-rpm-display { font-size: 14px; }
+    }
+</style>
+</head>
+<body>
+
+    <div id="turntable-container">
+        <div id="vinyl-image" class="touch-manipulation"></div>
+        <div id="status-indicator">Chargement Audio...</div>
+        
+        <div class="control-panel">
+            <button id="stop-button" class="vintage-btn">Arrêt</button>
+            <button id="direction-button" class="vintage-btn">!</button> 
+            <button id="zoom-button" class="vintage-btn">Zoom</button>
+        </div>
+
+        <div id="overlay-box" class="overlay-hidden">
+            <p id="current-rpm-display">STOP</p>
+        </div>
+
+        <div id="rpm-wrapper">
+            <div id="rpm-labels" class="rpm-labels">
+                <span data-mode="45">45</span>
+                <span data-mode="off">ARRÊT</span>
+                <span data-mode="33">33</span>
+            </div>
+            <div id="rpm-controls">
+                <div class="rpm-choice" data-mode="45" title="45 RPM"></div>
+                <div class="rpm-choice active" data-mode="off" title="Arrêt"></div>
+                <div class="rpm-choice" data-mode="33" title="33 1/3 RPM"></div> 
+            </div>
+            <img id="rpm-img" 
+                 src="https://tclaret.github.io/turntable/img/ChickenHead.png" 
+                 alt="Bouton RPM"
+                 style="transform: rotate(0deg);">
+        </div>
+        
+        <div id="pitch-wrapper">
+            <label for="pitch-slider" class="block text-xs font-semibold mb-1 text-center">PITCH (± 10%)</label>
+            <input type="range" id="pitch-slider" min="-0.1" max="0.1" step="0.001" value="0.0" class="w-full">
+            <div id="pitch-scale">
+                <span class="pitch-mark" id="mark-neg-10">-10</span>
+                <span class="pitch-mark" id="mark-neg-05">-5</span>
+                <span class="pitch-mark center" id="mark-zero">0</span>
+                <span class="pitch-mark" id="mark-pos-05">+5</span>
+                <span class="pitch-mark" id="mark-pos-10">+10</span>
+            </div>
+            <div id="pitch-value" class="text-center text-xs mt-1">0.00 %</div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- CONSTANTES DE CONFIGURATION ---
+        const RPM_RATES = {"45": 1.35, "off": 0, "33": 1.0}; 
+        const RPM_ROTATION = {"45": -30, "off": 0, "33": 30};
+        const ANGULAR_MULTIPLIER = 0.3;         
+        const VISUAL_RPM_MULTIPLIER = 3.3333;   
+        const REVERSE_SEEK_OFFSET = 0.05;       
+        const DESKTOP_ZOOM_SCALE = 1.7;         
+        const RAMP_TIME = 2;                    
+        
+        // --- ÉTATS GLOBAUX ---
+        const state = {
+            currentMode: "off",
+            pitchFactor: 1.0,
+            directionFactor: 1.0, 
+            targetBaseVelocity: 0, 
+            isScratchMode: false, 
+            visualZoomFactor: 1.0, 
+            isScratching: false,
+            lastAngle: 0, 
+            rotationDegrees: 0, 
+            currentScratchVelocity: 0, 
+            audioContextStarted: false
+        };
+        
+        // --- AUDIO ---
+        let player = null;
+        let normalBuffer = null; 
+        let bufferDuration = 0; 
+        let overlayTimeoutId = null; 
+        
+        // --- DOM ---
+        const vinylImage = document.getElementById('vinyl-image');
+        const rpmControls = document.getElementById('rpm-controls');
+        const rpmLabels = document.getElementById('rpm-labels');
+        const rpmImg = document.getElementById('rpm-img');
+        const currentRpmDisplay = document.getElementById('current-rpm-display');
+        const pitchSlider = document.getElementById('pitch-slider');
+        const pitchValueDisplay = document.getElementById('pitch-value');
+        const directionButton = document.getElementById('direction-button');
+        const zoomButton = document.getElementById('zoom-button');
+        const stopBtn = document.getElementById('stop-button');
+        const rpmWrapper = document.getElementById('rpm-wrapper');
+        const pitchWrapper = document.getElementById('pitch-wrapper');
+        const overlayBox = document.getElementById('overlay-box');
+        const statusIndicator = document.getElementById('status-indicator');
+
+
+        // --- OVERLAY & STATUS ---
+        const showOverlayBriefly = () => {
+            if (overlayTimeoutId) clearTimeout(overlayTimeoutId);
+            overlayBox.classList.remove('overlay-hidden');
+            overlayTimeoutId = setTimeout(() => {
+                overlayBox.classList.add('overlay-hidden');
+            }, 1500);
+        };
+        
+        const setStatus = (message, isError = false) => {
+            statusIndicator.textContent = message;
+            statusIndicator.style.borderColor = isError ? '#cc0000' : '#ffcc00';
+            statusIndicator.style.color = isError ? '#cc0000' : '#ffcc00';
+            statusIndicator.classList.remove('hidden');
+            if (!isError) {
+                setTimeout(() => statusIndicator.classList.add('hidden'), 2000);
+            }
+        };
+
+        // --- PLAYBACK RATE (RAMP FIX INCLUDED) ---
+        const updatePlaybackRate = (rampTime = 0) => {
+            // Ajout d'une vérification pour s'assurer que player est bien initialisé.
+            if (!player || !player.loaded || !player.playbackRate || typeof player.playbackRate !== 'object') return;
+
+            let finalRate = 0;
+            
+            if (state.isScratching) {
+                finalRate = state.currentScratchVelocity * state.directionFactor; 
+                rampTime = 0; // Le scratch est instantané
+            } else {
+                finalRate = state.targetBaseVelocity * state.pitchFactor * state.directionFactor;
+            }
+            
+            const speed = Math.abs(finalRate);
+            const isReverse = finalRate < 0;
+            const safeSpeed = Math.min(speed, 10); 
+
+            // 1. Annuler les rampes précédentes (méthode de la v14 de Tone.js)
+            if (typeof player.playbackRate.cancelScheduledValues === 'function') {
+                player.playbackRate.cancelScheduledValues(Tone.now());
+            }
+
+            if (rampTime > 0) {
+                // 2. Utiliser linearRampToValueAtTime (méthode de la v14 de Tone.js)
+                player.playbackRate.setValueAtTime(player.playbackRate.value, Tone.now());
+                player.playbackRate.linearRampToValueAtTime(safeSpeed, Tone.now() + rampTime);
+            } else {
+                // Changement instantané (pitch, direction, ou scratch)
+                player.playbackRate.value = safeSpeed;
+            }
+            
+            player.reverse = isReverse;
+        };
+
+        // --- CHARGEMENT AUDIO (Passage au MP3 et renforcement de la gestion des erreurs) ---
+        async function loadAudio() {
+            // CHANGEMENT CLÉ : Utilisation d'un fichier MP3 (plus compatible que OPUS)
+            const audioUrl = "https://tclaret.github.io/turntable/JB_Cold_Sweat.mp3"; 
+            setStatus('Chargement Audio (MP3)...');
+            try {
+                normalBuffer = await new Tone.Buffer(audioUrl, 
+                    // Success Callback
+                    () => {
+                        bufferDuration = normalBuffer.duration;
+                        try {
+                            player = new Tone.Player(normalBuffer).toDestination();
+                            player.loop = true;
+                            
+                            // VÉRIFICATION STICTE CONTRE LE "not an object"
+                            if (player.playbackRate && typeof player.playbackRate === 'object' && 'value' in player.playbackRate) {
+                                player.playbackRate.value = 0; 
+                                player.start(0); 
+                                setStatus('Prêt ! Cliquez sur 33 ou 45.', false);
+                                statusIndicator.classList.add('hidden');
+                            } else {
+                                console.error("Erreur Player: playbackRate non initialisé correctement.", player);
+                                setStatus("Erreur critique: Tone.Player n'a pas pu initialiser le taux de lecture.", true);
+                            }
+
+                        } catch (e) {
+                            console.error("Erreur Player (création):", e);
+                            setStatus("Erreur: Impossible de créer le lecteur audio.", true);
+                        }
+                    },
+                    // Error Callback
+                    (error) => {
+                        console.error("Erreur Load (Tone.Buffer):", error);
+                        // L'erreur ici est souvent liée au CORS ou au chargement du fichier
+                        setStatus("Erreur: Impossible de charger l'audio. Vérifiez votre réseau/CDN.", true);
+                    }
+                );
+            } catch (error) {
+                console.error("Erreur Tone (construction Buffer):", error);
+                setStatus("Erreur critique: Tone.js ne peut pas créer le buffer.", true);
+            }
+        }
+
+
+        // --- CONTRÔLE RPM ---
+        const setRpmMode = (mode) => {
+            // Vérification de l'initialisation du player (plus robuste)
+            if (!player || !player.loaded || !state.audioContextStarted) {
+                if (mode === 'off') return; 
+                
+                // Tenter de démarrer le contexte si on passe en 33/45 et qu'il est arrêté
+                Tone.start().then(() => {
+                    state.audioContextStarted = true;
+                    applyRpmMode(mode);
+                }).catch(e => {
+                    console.error("Erreur de démarrage du contexte audio:", e);
+                    setStatus("Erreur de démarrage audio. Assurez-vous d'interagir avec la page.", true);
+                });
+                return;
+            }
+            
+            if (state.currentMode === mode && mode !== 'off') return; 
+            
+            applyRpmMode(mode);
+        };
+
+        const applyRpmMode = (mode) => {
+            const oldMode = state.currentMode;
+            state.currentMode = mode;
+            
+            document.querySelectorAll('.rpm-choice').forEach(c => c.classList.remove('active'));
+            const activeChoice = document.querySelector(`.rpm-choice[data-mode='${mode}']`);
+            if (activeChoice) activeChoice.classList.add('active');
+            
+            rpmImg.style.transform = `rotate(${RPM_ROTATION[mode]}deg)`;
+            
+            if (mode === 'off') {
+                state.targetBaseVelocity = 0;
+                currentRpmDisplay.textContent = 'STOP';
+                updatePlaybackRate(RAMP_TIME); 
+            } else {
+                state.targetBaseVelocity = RPM_RATES[mode];
+                currentRpmDisplay.textContent = mode + ' RPM';
+                const rampDuration = oldMode === 'off' ? RAMP_TIME : 0.5;
+                updatePlaybackRate(rampDuration); 
+            }
+            showOverlayBriefly();
+        }
+
+        // --- PITCH ---
+        pitchSlider.addEventListener('input', () => {
+            state.pitchFactor = 1.0 + parseFloat(pitchSlider.value);
+            pitchValueDisplay.textContent = (parseFloat(pitchSlider.value) * 100).toFixed(2) + ' %';
+            if (!state.isScratching) updatePlaybackRate(0); 
+        });
+
+        // --- DIRECTION ---
+        directionButton.addEventListener('click', () => {
+            state.directionFactor *= -1; 
+            if (state.directionFactor === 1.0) {
+                directionButton.textContent = '!'; 
+                directionButton.classList.remove('reverse-active');
+            } else {
+                directionButton.textContent = 'Reverse'; 
+                directionButton.classList.add('reverse-active');
+            }
+            showOverlayBriefly();
+            updatePlaybackRate(0); 
+        });
+
+        // --- STOP BUTTON ---
+        stopBtn.addEventListener('click', () => {
+            setRpmMode('off');
+        });
+
+        // --- ZOOM / SCRATCH VIEW ---
+        const isMobile = () => window.innerWidth <= 768;
+
+        const updateScratchModeUI = () => {
+            const isScratchMode = state.isScratchMode;
+            vinylImage.classList.toggle('vinyl-scratch-mobile', isMobile() && isScratchMode);
+            vinylImage.classList.toggle('vinyl-scratch-desktop', !isMobile() && isScratchMode);
+            
+            rpmWrapper.classList.toggle('rpm-scratch-centered', isScratchMode);
+            pitchWrapper.classList.toggle('pitch-scratch-centered', isScratchMode);
+            
+            zoomButton.textContent = isScratchMode ? 'Vue Centrée' : 'Zoom';
+            state.visualZoomFactor = (!isMobile() && isScratchMode) ? DESKTOP_ZOOM_SCALE : 1.0; 
+        };
+        
+        zoomButton.addEventListener('click', () => {
+            state.isScratchMode = !state.isScratchMode;
+            updateScratchModeUI();
+        });
+        window.addEventListener('resize', updateScratchModeUI);
+
+
+        // --- LOGIQUE SCRATCH ---
+        const getVinylCenter = () => {
+            const rect = vinylImage.getBoundingClientRect();
+            return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        };
+        
+        const getAngle = (x, y, centerX, centerY) => {
+            const dx = x - centerX;
+            const dy = y - centerY;
+            return Math.atan2(dy, dx) * (180 / Math.PI);
+        };
+        
+        const startScratch = (clientX, clientY) => {
+            if (!player || state.currentMode === 'off' || !player.loaded) return;
+            if (!state.audioContextStarted) {
+                // Tenter de démarrer le contexte au premier scratch si ce n'est pas fait
+                Tone.start().then(() => {
+                    state.audioContextStarted = true;
+                    performStartScratch(clientX, clientY);
+                }).catch(e => console.error("Erreur de démarrage du contexte audio (scratch):", e));
+            } else {
+                performStartScratch(clientX, clientY);
+            }
+        };
+        
+        const performStartScratch = (clientX, clientY) => {
+            state.isScratching = true;
+            vinylImage.style.cursor = 'grabbing';
+            const center = getVinylCenter();
+            state.lastAngle = getAngle(clientX, clientY, center.x, center.y);
+            
+            currentRpmDisplay.textContent = 'SCRATCHING';
+            showOverlayBriefly();
+            updatePlaybackRate(0); 
+        }
+
+
+        const moveScratch = (clientX, clientY) => {
+            if (!state.isScratching) return;
+            const center = getVinylCenter();
+            const currentAngle = getAngle(clientX, clientY, center.x, center.y);
+            let deltaAngle = currentAngle - state.lastAngle;
+            
+            if (deltaAngle > 180) deltaAngle -= 360;
+            else if (deltaAngle < -180) deltaAngle += 360;
+
+            state.currentScratchVelocity = deltaAngle * ANGULAR_MULTIPLIER;
+            state.rotationDegrees += deltaAngle;
+            state.lastAngle = currentAngle;
+            
+            updatePlaybackRate(0);
+        };
+
+        const endScratch = () => {
+            if (!state.isScratching) return;
+            state.isScratching = false;
+            state.currentScratchVelocity = 0; 
+            vinylImage.style.cursor = 'grab';
+            
+            updatePlaybackRate(RAMP_TIME); 
+            
+            currentRpmDisplay.textContent = state.currentMode === 'off' ? 'STOP' : state.currentMode + ' RPM';
+            showOverlayBriefly();
+        };
+        
+        // --- GESTIONNAIRES D'ÉVÉNEMENTS ---
+        vinylImage.addEventListener('mousedown', (e) => startScratch(e.clientX, e.clientY));
+        vinylImage.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) startScratch(e.touches[0].clientX, e.touches[0].clientY);
+        });
+        
+        document.addEventListener('mousemove', (e) => moveScratch(e.clientX, e.clientY));
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1) moveScratch(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false }); 
+        
+        document.addEventListener('mouseup', endScratch);
+        document.addEventListener('touchend', endScratch);
+        document.addEventListener('touchcancel', endScratch);
+        document.addEventListener('mouseleave', endScratch); 
+
+        const handleRpmClick = (e) => {
+            const mode = e.target.dataset.mode;
+            if (mode) setRpmMode(mode);
+        };
+        rpmControls.addEventListener('click', handleRpmClick);
+        rpmLabels.addEventListener('click', handleRpmClick);
+        rpmImg.addEventListener('click', () => setRpmMode(state.currentMode === 'off' ? '33' : (state.currentMode === '33' ? '45' : '33')));
+
+        // --- ANIMATION LOOP ---
+        let lastTime = performance.now(); 
+        function animate() {
+            requestAnimationFrame(animate);
+            if (!player || !player.loaded || bufferDuration === 0) return;
+
+            const now = performance.now(); 
+            const dt = (now - lastTime) / 1000; 
+            lastTime = now;
+            
+            // Ajout d'une vérification pour s'assurer que playbackRate est un objet avant de lire la valeur
+            const currentRate = (player.playbackRate && typeof player.playbackRate.value === 'number') ? player.playbackRate.value : 0; 
+            
+            if (player.reverse && player.now() <= REVERSE_SEEK_OFFSET) { 
+                player.seek(bufferDuration - REVERSE_SEEK_OFFSET); 
+            }
+            
+            if (state.isScratching) {
+                if (Math.abs(state.currentScratchVelocity) > 0.0001) state.currentScratchVelocity *= 0.99; 
+            } else if (currentRate !== 0) {
+                const visualRotationFactor = currentRate * VISUAL_RPM_MULTIPLIER * dt * 60;
+                if (player.reverse) {
+                    state.rotationDegrees -= visualRotationFactor;
+                } else {
+                    state.rotationDegrees += visualRotationFactor; 
+                }
+            }
+            
+            vinylImage.style.transform = `translate(-50%, -50%) scale(${state.visualZoomFactor}) rotate(${state.rotationDegrees}deg)`;
+        }
+
+        // --- INIT ---
+        window.onload = function() {
+            loadAudio();
+            animate();
+            
+            state.isScratchMode = false; 
+            updateScratchModeUI();
+            
+            pitchValueDisplay.textContent = (parseFloat(pitchSlider.value) * 100).toFixed(2) + ' %';
+        }
+    </script>
+</body>
+</html>
