@@ -82,10 +82,10 @@ git push --force origin main
 ## Quick Commands
 
 ```bash
-# One-liner to pull and push (with explicit merge)
+# Pull and push with explicit merge strategy
 git pull --no-rebase origin main && git push origin main
 
-# Or configure git once to use merge by default
+# Or configure git once to use merge by default, then pull and push
 git config pull.rebase false
 git pull origin main && git push origin main
 

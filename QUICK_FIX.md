@@ -60,7 +60,7 @@ git push origin main
 | Normal sync | `git pull --no-rebase origin main && git push origin main` | Comfortable with git |
 | Want clean history | `git pull --rebase origin main` | Team prefers linear history |
 | Solo project | `git push --force-with-lease origin main` | You're the only contributor |
-| Divergent branches error | `git config pull.rebase false` then pull/push | One-time git configuration |
+| Divergent branches error | `git config pull.rebase false && git pull origin main` | One-time git configuration |
 
 ### Prevention
 
