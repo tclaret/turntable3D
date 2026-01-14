@@ -8,7 +8,13 @@ error: failed to push some refs
 
 ### Quick Fix (Choose One)
 
-#### 🎯 Easiest: Use Our Script
+#### 🔍 Best: Diagnose First (Recommended)
+```bash
+./diagnose-and-fix.sh
+# Shows exactly what's wrong and offers to fix it
+```
+
+#### 🎯 Easiest: Use Auto-Sync Script
 ```bash
 ./sync-and-push.sh main
 ```
@@ -39,10 +45,11 @@ git push origin main
 
 | Situation | Command | When to Use |
 |-----------|---------|-------------|
-| Normal sync | `git pull origin main && git push origin main` | Most common case |
+| Want to understand the issue | `./diagnose-and-fix.sh` | First time or complex situation |
+| Quick automated fix | `./sync-and-push.sh main` | Trust automation, want speed |
+| Normal sync | `git pull origin main && git push origin main` | Comfortable with git |
 | Want clean history | `git pull --rebase origin main` | Team prefers linear history |
 | Solo project | `git push --force-with-lease origin main` | You're the only contributor |
-| **Recommended** | `./sync-and-push.sh main` | Handles everything automatically |
 
 ### Prevention
 

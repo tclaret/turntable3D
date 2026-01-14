@@ -8,10 +8,13 @@ Simulate scratching vinyl on a 3D turntable.
 If you encounter a "non-fast-forward" error when pushing:
 
 ```bash
-# Option 1: Use the automated script
+# Option 1: Use the diagnostic tool (Recommended - shows what's wrong)
+./diagnose-and-fix.sh
+
+# Option 2: Use the automated sync script
 ./sync-and-push.sh main
 
-# Option 2: Manual sync
+# Option 3: Manual sync
 git pull origin main
 git push origin main
 ```
