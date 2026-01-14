@@ -1,14 +1,16 @@
 # turntable3D
 Simulate scratching vinyl on a 3D turntable.
 
-## 🚨 Quick Fix for "non-fast-forward" Error
+---
 
-If you're getting a push error right now, **do this immediately**:
+## 🆘 GETTING A PUSH ERROR? → [IMMEDIATE_FIX.md](IMMEDIATE_FIX.md)
 
+**Quick fix:**
 ```bash
-git pull origin main
-git push origin main
+git pull origin main && git push origin main
 ```
+
+---
 
 ## 📦 Getting the Helper Scripts
 
