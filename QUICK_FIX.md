@@ -1,0 +1,59 @@
+## Quick Reference: Fixing "rejected - non-fast-forward" Error
+
+### The Error You're Seeing
+```
+! [rejected]        main -> main (non-fast-forward)
+error: failed to push some refs
+```
+
+### Quick Fix (Choose One)
+
+#### 🎯 Easiest: Use Our Script
+```bash
+./sync-and-push.sh main
+```
+
+#### 📝 Manual Method
+```bash
+# 1. Pull remote changes
+git pull origin main
+
+# 2. If conflicts occur, fix them then:
+git add .
+git commit -m "Resolve merge conflicts"
+
+# 3. Push
+git push origin main
+```
+
+#### 🧹 Clean History (Rebase)
+```bash
+git pull --rebase origin main
+# Fix conflicts if needed, then:
+git add .
+git rebase --continue
+git push origin main
+```
+
+### When to Use What
+
+| Situation | Command | When to Use |
+|-----------|---------|-------------|
+| Normal sync | `git pull origin main && git push origin main` | Most common case |
+| Want clean history | `git pull --rebase origin main` | Team prefers linear history |
+| Solo project | `git push --force-with-lease origin main` | You're the only contributor |
+| **Recommended** | `./sync-and-push.sh main` | Handles everything automatically |
+
+### Prevention
+
+Set up auto-pull before push:
+```bash
+# Add this alias to ~/.gitconfig
+[alias]
+    pushup = "!git pull origin $(git rev-parse --abbrev-ref HEAD) && git push origin $(git rev-parse --abbrev-ref HEAD)"
+```
+
+Then use: `git pushup`
+
+---
+📖 **Full Guide**: See [PUSH_GUIDE.md](PUSH_GUIDE.md) for detailed explanations.

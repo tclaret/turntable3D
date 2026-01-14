@@ -16,4 +16,5 @@ git pull origin main
 git push origin main
 ```
 
-See [PUSH_GUIDE.md](PUSH_GUIDE.md) for detailed instructions on resolving push conflicts.
+📋 **Quick Reference**: [QUICK_FIX.md](QUICK_FIX.md)  
+📖 **Detailed Guide**: [PUSH_GUIDE.md](PUSH_GUIDE.md)
