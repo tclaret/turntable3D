@@ -8,6 +8,13 @@ error: failed to push some refs
 
 ## Fix It Right Now
 
+### If you see "refusing to merge unrelated histories" error:
+```bash
+# This happens when local and remote have completely different histories
+git pull --no-rebase --allow-unrelated-histories origin main
+git push origin main
+```
+
 ### If you see "divergent branches" error:
 ```bash
 # Configure git to use merge strategy (one-time setup)

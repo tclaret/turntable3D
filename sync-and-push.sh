@@ -89,9 +89,28 @@ if ! git show-ref --verify --quiet "refs/remotes/$REMOTE/$BRANCH"; then
 fi
 
 # Check if we're behind
-LOCAL=$(git rev-parse "$BRANCH")
-REMOTE_REF=$(git rev-parse "$REMOTE/$BRANCH")
-BASE=$(git merge-base "$BRANCH" "$REMOTE/$BRANCH")
+LOCAL=$(git rev-parse "$BRANCH" 2>/dev/null) || { echo "❌ Error: Could not get local commit"; exit 1; }
+REMOTE_REF=$(git rev-parse "$REMOTE/$BRANCH" 2>/dev/null) || { echo "❌ Error: Could not get remote commit"; exit 1; }
+BASE=$(git merge-base "$BRANCH" "$REMOTE/$BRANCH" 2>/dev/null)
+
+# Check if merge-base failed (unrelated histories)
+if [ -z "$BASE" ]; then
+    echo "⚠️  Local and remote have unrelated histories!"
+    echo "🔄 This typically happens with a fresh repository."
+    echo "📥 Pulling with --allow-unrelated-histories..."
+    git pull --no-rebase --allow-unrelated-histories "$REMOTE" "$BRANCH" || {
+        echo "❌ Merge conflicts detected. Please resolve them manually:"
+        echo "   1. Fix conflicts in the listed files"
+        echo "   2. Run: git add ."
+        echo "   3. Run: git commit"
+        echo "   4. Run: git push \"$REMOTE\" \"$BRANCH\""
+        exit 1
+    }
+    echo "📤 Pushing merged changes..."
+    git push "$REMOTE" "$BRANCH"
+    echo "✅ Successfully synced and pushed $BRANCH!"
+    exit 0
+fi
 
 if [ "$LOCAL" = "$REMOTE_REF" ]; then
     echo "✅ Already up to date with $REMOTE/$BRANCH"

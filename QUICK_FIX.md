@@ -42,6 +42,14 @@ git pull origin main
 git push origin main
 ```
 
+#### 🔗 If You See "Unrelated Histories" Error
+```bash
+# Allow merging unrelated histories
+git pull --no-rebase --allow-unrelated-histories origin main
+git push origin main
+```
+⚠️ Only use this if you're merging two separate repositories.
+
 #### 🧹 Clean History (Rebase)
 ```bash
 git pull --rebase origin main
@@ -61,6 +69,7 @@ git push origin main
 | Want clean history | `git pull --rebase origin main` | Team prefers linear history |
 | Solo project | `git push --force-with-lease origin main` | You're the only contributor |
 | Divergent branches error | `git config pull.rebase false && git pull origin main` | One-time git configuration |
+| Unrelated histories error | `git pull --no-rebase --allow-unrelated-histories origin main` | Merging separate repositories |
 
 ### Prevention
 

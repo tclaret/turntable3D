@@ -11,6 +11,26 @@ hint: its remote counterpart.
 
 This means your local `main` branch is behind the remote `main` branch.
 
+## Unrelated Histories Error
+
+If you see this error when running `git pull`:
+```
+fatal: refusing to merge unrelated histories
+```
+
+This means your local repository and the remote repository don't share any common commit history. This typically happens when:
+- You initialized a new local repository
+- The remote was initialized separately  
+- You're trying to merge two completely independent projects
+
+**Solution**: Use the `--allow-unrelated-histories` flag:
+```bash
+git pull --no-rebase --allow-unrelated-histories origin main
+git push origin main
+```
+
+⚠️ **Warning**: Only use this if you're sure you want to merge two unrelated repositories. Review the changes carefully.
+
 ## Divergent Branches Error (Git 2.27+)
 
 If you see this error when running `git pull`:

@@ -46,6 +46,57 @@ BASE=$(git merge-base "$BRANCH" "$REMOTE/$BRANCH" 2>/dev/null)
 echo "🔬 Diagnosis:"
 echo ""
 
+# Check for unrelated histories
+if [ -z "$BASE" ]; then
+    echo "⚠️  Local and remote have UNRELATED HISTORIES"
+    echo ""
+    echo "This means your local repository and the remote repository"
+    echo "don't share any common commits. This typically happens when:"
+    echo "  • You initialized a new local repo"
+    echo "  • The remote was initialized separately"
+    echo "  • You're working with a fresh clone that has different history"
+    echo ""
+    echo "❗ This is why you're getting the 'refusing to merge unrelated histories' error!"
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "🔧 Solution:"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "You need to use --allow-unrelated-histories:"
+    echo "   git pull --no-rebase --allow-unrelated-histories $REMOTE $BRANCH"
+    echo "   git push $REMOTE $BRANCH"
+    echo ""
+    read -p "Would you like me to fix this automatically? (y/n) " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo ""
+        echo "🔄 Pulling with --allow-unrelated-histories..."
+        if git pull --no-rebase --allow-unrelated-histories "$REMOTE" "$BRANCH"; then
+            echo "✅ Pull successful!"
+            echo ""
+            echo "📤 Now pushing to remote..."
+            if git push "$REMOTE" "$BRANCH"; then
+                echo "✅ Push successful!"
+                echo ""
+                echo "🎉 All done! Your branches are now synced."
+            else
+                echo "❌ Push failed. Please check the error message above."
+                exit 1
+            fi
+        else
+            echo "❌ Merge conflicts detected!"
+            echo ""
+            echo "📋 To resolve:"
+            echo "   1. Fix conflicts in the listed files"
+            echo "   2. Run: git add <fixed-files>"
+            echo "   3. Run: git commit"
+            echo "   4. Run: git push $REMOTE $BRANCH"
+            exit 1
+        fi
+    fi
+    exit 0
+fi
+
 if [ "$LOCAL" = "$REMOTE_REF" ]; then
     echo "✅ Your branch is up to date with $REMOTE/$BRANCH"
     echo ""

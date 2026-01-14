@@ -7,7 +7,10 @@ Simulate scratching vinyl on a 3D turntable.
 
 **Quick fix:**
 ```bash
-# If you see "divergent branches" error, use:
+# If you see "unrelated histories" error:
+git pull --no-rebase --allow-unrelated-histories origin main && git push origin main
+
+# If you see "divergent branches" error:
 git pull --no-rebase origin main && git push origin main
 
 # Or configure git once:
