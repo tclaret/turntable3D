@@ -23,6 +23,12 @@ fi
 BRANCH=${1:-main}
 REMOTE="origin"
 
+# Validate branch name to prevent command injection
+if [[ ! "$BRANCH" =~ ^[a-zA-Z0-9/_-]+$ ]]; then
+    echo "❌ Error: Invalid branch name. Only alphanumeric characters, /, -, and _ are allowed."
+    exit 1
+fi
+
 echo "🔄 Syncing and pushing branch: $BRANCH"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
@@ -33,31 +39,36 @@ if ! git rev-parse --git-dir > /dev/null 2>&1; then
 fi
 
 # Check if branch exists
-if ! git show-ref --verify --quiet refs/heads/$BRANCH; then
+if ! git show-ref --verify --quiet "refs/heads/$BRANCH"; then
     echo "❌ Error: Branch '$BRANCH' does not exist locally"
     exit 1
 fi
 
 # Save current branch
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+if [ $? -ne 0 ] || [ -z "$CURRENT_BRANCH" ]; then
+    echo "❌ Error: Unable to determine current branch"
+    exit 1
+fi
 
 # Switch to target branch if not already on it
 if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
     echo "📍 Switching to branch: $BRANCH"
-    git checkout $BRANCH || exit 1
+    git checkout "$BRANCH" || exit 1
 fi
 
-# Check for uncommitted changes
-if ! git diff-index --quiet HEAD --; then
-    echo "⚠️  Warning: You have uncommitted changes"
+# Check for uncommitted changes (including untracked files)
+STATUS_OUTPUT=$(git status --porcelain)
+if [ -n "$STATUS_OUTPUT" ]; then
+    echo "⚠️  Warning: You have uncommitted or untracked changes"
     echo "Options:"
     echo "  1. Commit them: git add . && git commit -m 'your message'"
-    echo "  2. Stash them: git stash"
-    echo "  3. Discard them: git reset --hard HEAD"
-    read -p "Do you want to stash your changes? (y/n) " -n 1 -r
+    echo "  2. Stash them: git stash -u (includes untracked)"
+    echo "  3. Discard them: git reset --hard HEAD && git clean -fd"
+    read -p "Do you want to stash your changes (including untracked)? (y/n) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        git stash
+        git stash -u
         STASHED=true
     else
         echo "❌ Aborting. Please handle uncommitted changes first."
@@ -67,47 +78,47 @@ fi
 
 # Fetch latest changes
 echo "📥 Fetching latest changes from $REMOTE..."
-git fetch $REMOTE || exit 1
+git fetch "$REMOTE" || exit 1
 
 # Check if remote branch exists
-if ! git show-ref --verify --quiet refs/remotes/$REMOTE/$BRANCH; then
+if ! git show-ref --verify --quiet "refs/remotes/$REMOTE/$BRANCH"; then
     echo "ℹ️  Remote branch '$REMOTE/$BRANCH' doesn't exist yet"
     echo "📤 Pushing local branch to remote..."
-    git push --set-upstream $REMOTE $BRANCH
+    git push --set-upstream "$REMOTE" "$BRANCH"
     exit 0
 fi
 
 # Check if we're behind
-LOCAL=$(git rev-parse $BRANCH)
-REMOTE_REF=$(git rev-parse $REMOTE/$BRANCH)
-BASE=$(git merge-base $BRANCH $REMOTE/$BRANCH)
+LOCAL=$(git rev-parse "$BRANCH")
+REMOTE_REF=$(git rev-parse "$REMOTE/$BRANCH")
+BASE=$(git merge-base "$BRANCH" "$REMOTE/$BRANCH")
 
 if [ "$LOCAL" = "$REMOTE_REF" ]; then
     echo "✅ Already up to date with $REMOTE/$BRANCH"
     echo "📤 Pushing to remote..."
-    git push $REMOTE $BRANCH
+    git push "$REMOTE" "$BRANCH"
 elif [ "$LOCAL" = "$BASE" ]; then
     echo "⬇️  Your branch is behind $REMOTE/$BRANCH"
     echo "📥 Pulling changes..."
-    git pull $REMOTE $BRANCH || exit 1
+    git pull "$REMOTE" "$BRANCH" || exit 1
     echo "📤 Pushing to remote..."
-    git push $REMOTE $BRANCH
+    git push "$REMOTE" "$BRANCH"
 elif [ "$REMOTE_REF" = "$BASE" ]; then
     echo "⬆️  Your branch is ahead of $REMOTE/$BRANCH"
     echo "📤 Pushing to remote..."
-    git push $REMOTE $BRANCH
+    git push "$REMOTE" "$BRANCH"
 else
     echo "🔀 Branches have diverged. Pulling with merge strategy..."
-    git pull $REMOTE $BRANCH || {
+    git pull "$REMOTE" "$BRANCH" || {
         echo "❌ Merge conflicts detected. Please resolve them manually:"
         echo "   1. Fix conflicts in the listed files"
         echo "   2. Run: git add ."
         echo "   3. Run: git commit"
-        echo "   4. Run: git push $REMOTE $BRANCH"
+        echo "   4. Run: git push \"$REMOTE\" \"$BRANCH\""
         exit 1
     }
     echo "📤 Pushing merged changes..."
-    git push $REMOTE $BRANCH
+    git push "$REMOTE" "$BRANCH"
 fi
 
 # Restore stashed changes if any
