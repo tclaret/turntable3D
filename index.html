@@ -854,67 +854,87 @@
             transform-style: preserve-3d;
             transition: transform 0.6s ease-in-out;
 
-            width: 4vmin;
-            height: 4vmin;
-            background: radial-gradient(circle at 35% 35%, #555, #3a3a3a, #222, #111);
+            width: 7vmin;
+            height: 7vmin;
+            /* Plus grand pour le gimbal */
+            background: radial-gradient(circle at 35% 35%, #333, #111);
             border-radius: 50%;
-            border: 0.4vmin solid #1a1a1a;
+            border: 0.2vmin solid #000;
             box-shadow:
-                0 0.5vmin 1vmin rgba(0, 0, 0, 0.6),
-                inset 0.3vmin 0.3vmin 0.6vmin rgba(255, 255, 255, 0.3),
-                inset -0.3vmin -0.3vmin 0.6vmin rgba(0, 0, 0, 0.5);
+                0 0.5vmin 1.5vmin rgba(0, 0, 0, 0.7),
+                inset 0.2vmin 0.2vmin 0.5vmin rgba(255, 255, 255, 0.2);
 
             transform-origin: center center;
             pointer-events: none;
         }
 
+        /* Gimbal ring detail */
+        .tonearm-gimbal-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5vmin;
+            height: 5vmin;
+            border: 0.8vmin solid #222;
+            border-radius: 50%;
+            transform: translate(-50%, -50%) rotateX(45deg);
+            box-shadow: 0 0.2vmin 0.5vmin rgba(0, 0, 0, 0.5);
+            transform-style: preserve-3d;
+        }
+
+        .tonearm-gimbal-ring::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4vmin;
+            height: 0.5vmin;
+            background: #444;
+            transform: translate(-50%, -50%) rotateY(90deg);
+        }
+
+        /* Contrepoids à l'arrière du pivot */
         /* Contrepoids à l'arrière du pivot */
         .tonearm-counterweight {
             position: absolute;
             left: 50%;
             top: 50%;
-            width: 2vmin;
-            height: 8vmin;
-            transform: translate(-50%, -50%) translateX(4vmin) translateZ(8vmin) rotateZ(180deg);
+            width: 3vmin;
+            height: 4vmin;
+            /* Plus court, plus trapu */
+            transform: translate(-50%, -50%) translateX(6vmin) translateZ(3vmin) rotateY(90deg);
             transform-style: preserve-3d;
-            background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 30%, #1a1a1a 50%, #2a2a2a 70%, #3a3a3a 100%);
-            border-radius: 1vmin;
+            background: linear-gradient(90deg, #111, #333 50%, #111);
+            border-radius: 50%;
+            /* Cylindrique */
             box-shadow:
-                0 0.5vmin 1vmin rgba(0, 0, 0, 0.5),
-                inset 0.3vmin 0 0.5vmin rgba(255, 255, 255, 0.2),
-                inset -0.3vmin 0 0.5vmin rgba(0, 0, 0, 0.4);
-            border: 0.2vmin solid #111;
+                0 0.5vmin 1vmin rgba(0, 0, 0, 0.6),
+                inset 0 0 0.5vmin rgba(255, 255, 255, 0.1);
+            border: 0.1vmin solid #000;
         }
 
-        /* Extrémités du contrepoids */
+        /* Anneau argenté sur le contrepoids */
         .tonearm-counterweight::before {
             content: '';
             position: absolute;
             width: 100%;
-            height: 100%;
-            top: 0;
+            height: 30%;
+            top: 20%;
             left: 0;
-            background: linear-gradient(90deg,
-                    transparent 0%,
-                    rgba(255, 255, 255, 0.1) 50%,
-                    transparent 100%);
-            border-radius: 1vmin;
+            background: linear-gradient(90deg, #888, #eee 40%, #888);
+            box-shadow: 0 0 0.2vmin rgba(0, 0, 0, 0.3);
         }
 
         .tonearm-counterweight::after {
             content: '';
             position: absolute;
-            width: 2.5vmin;
-            height: 2.5vmin;
+            width: 80%;
+            height: 80%;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
-            background: radial-gradient(circle at 40% 40%, #4a4a4a, #2a2a2a, #1a1a1a);
+            transform: translate(-50%, -50%) translateZ(-1vmin);
+            background: #222;
             border-radius: 50%;
-            border: 0.2vmin solid #0a0a0a;
-            box-shadow:
-                inset 0.2vmin 0.2vmin 0.4vmin rgba(255, 255, 255, 0.2),
-                0 0.3vmin 0.6vmin rgba(0, 0, 0, 0.5);
         }
 
         .tonearm-image {
@@ -1020,21 +1040,24 @@
         /* Tête de lecture au bout du bras */
 
         /* Tête de lecture au bout du bras */
+        /* Tête de lecture au bout du bras */
         .tonearm-headshell {
             position: absolute;
             right: -1vmin;
             top: 50%;
-            transform: translateY(-50%) rotateZ(25deg);
+            transform: translateY(-50%) rotateZ(5deg);
+            /* Moins d'angle */
             transform-origin: left center;
-            width: 3.5vmin;
-            height: 2.5vmin;
-            background: linear-gradient(135deg, #e0e0e0 0%, #c0c0c0 50%, #a0a0a0 100%);
-            border-radius: 0.5vmin 1.5vmin 1.5vmin 0.5vmin;
-            border: 0.2vmin solid #888;
+            width: 4vmin;
+            height: 2vmin;
+            background: linear-gradient(to right, #222, #444);
+            /* Noir/Gris foncé */
+            border-radius: 0.2vmin;
+            /* Plus carré */
+            border: 0.1vmin solid #000;
             box-shadow:
-                0 0.3vmin 0.8vmin rgba(0, 0, 0, 0.4),
-                inset 0.2vmin 0.2vmin 0.4vmin rgba(255, 255, 255, 0.4),
-                inset -0.2vmin -0.2vmin 0.4vmin rgba(0, 0, 0, 0.3);
+                0 0.3vmin 0.8vmin rgba(0, 0, 0, 0.6),
+                inset 0.2vmin 0.2vmin 0.4vmin rgba(255, 255, 255, 0.2);
             transform-style: preserve-3d;
         }
 
@@ -1042,13 +1065,12 @@
         .tonearm-headshell::before {
             content: '';
             position: absolute;
-            right: -0.5vmin;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 0.8vmin;
-            height: 0.1vmin;
-            background: linear-gradient(90deg, #666, #999, #ccc);
-            border-radius: 0 0.05vmin 0.05vmin 0;
+            right: 0.5vmin;
+            bottom: -0.5vmin;
+            width: 0.3vmin;
+            height: 0.8vmin;
+            background: #fff;
+            border-radius: 0.1vmin;
             box-shadow: 0 0.1vmin 0.2vmin rgba(0, 0, 0, 0.5);
         }
 
@@ -1059,14 +1081,10 @@
             right: 0.5vmin;
             top: 50%;
             transform: translateY(-50%);
-            width: 1.5vmin;
-            height: 1.2vmin;
-            background: linear-gradient(135deg, #4a4a4a, #2a2a2a);
-            border-radius: 0.3vmin;
-            border: 0.1vmin solid #1a1a1a;
-            box-shadow:
-                inset 0.1vmin 0.1vmin 0.2vmin rgba(255, 255, 255, 0.2),
-                0 0.2vmin 0.4vmin rgba(0, 0, 0, 0.3);
+            width: 2vmin;
+            height: 1.5vmin;
+            background: #111;
+            border: 0.1vmin solid #333;
         }
 
         /* Tonearm rest stand */
@@ -1648,30 +1666,30 @@
 
                 <div class="tonearm-rest"></div>
                 <div id="tonearm-container" class="tonearm-container">
+                    <div class="tonearm-gimbal-ring"></div>
                     <div class="tonearm-counterweight"></div>
                     <div class="tonearm-image">
                         <svg viewBox="0 0 280 60" xmlns="http://www.w3.org/2000/svg">
                             <defs>
                                 <linearGradient id="armGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" style="stop-color:#e8e8e8;stop-opacity:1" />
-                                    <stop offset="50%" style="stop-color:#c0c0c0;stop-opacity:1" />
-                                    <stop offset="100%" style="stop-color:#a0a0a0;stop-opacity:1" />
+                                    <stop offset="0%" style="stop-color:#d0d0d0;stop-opacity:1" />
+                                    <stop offset="40%" style="stop-color:#f0f0f0;stop-opacity:1" />
+                                    <stop offset="60%" style="stop-color:#a0a0a0;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#707070;stop-opacity:1" />
                                 </linearGradient>
                                 <linearGradient id="armShine" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" style="stop-color:#fff;stop-opacity:0.3" />
+                                    <stop offset="0%" style="stop-color:#fff;stop-opacity:0.4" />
                                     <stop offset="50%" style="stop-color:#fff;stop-opacity:0.1" />
                                     <stop offset="100%" style="stop-color:#fff;stop-opacity:0" />
                                 </linearGradient>
                             </defs>
-                            <!-- Tonearm with realistic S-curve (extended to pivot) -->
-                            <path
-                                d="M 0,30 L 8,32 C 8,42 35,48 70,40 C 100,33 130,25 160,30 C 190,35 220,40 250,38 C 265,37 272,36 275,35 
-                                 L 275,25 C 272,24 265,23 250,22 C 220,20 190,25 160,20 C 130,15 100,23 70,30 C 35,37 8,28 8,28 L 0,30 Z"
-                                fill="url(#armGradient)" stroke="#888" stroke-width="0.6" />
+                            <!-- Updated sleek S-curve -->
+                            <path d="M 0,30 L 20,30 C 60,30 80,45 120,42 C 160,39 200,28 240,32 C 260,34 270,34 275,34 
+                                 L 275,26 C 270,26 260,26 240,24 C 200,20 160,31 120,34 C 80,37 60,22 20,22 L 0,22 Z"
+                                fill="url(#armGradient)" stroke="#666" stroke-width="0.5" />
                             <!-- Shine effect -->
-                            <path
-                                d="M 2,30 L 10,31 C 10,40 35,45 70,38 C 100,32 130,24 160,29 C 190,34 220,38 250,36 C 262,35 270,34 273,33"
-                                fill="none" stroke="url(#armShine)" stroke-width="3" opacity="0.6" />
+                            <path d="M 5,26 C 60,26 80,41 120,38 C 160,35 200,24 240,28 C 255,29 265,29 270,29"
+                                fill="none" stroke="url(#armShine)" stroke-width="4" opacity="0.5" />
                         </svg>
                         <div class="tonearm-headshell"></div>
                     </div>
@@ -2240,7 +2258,9 @@
 
                 // Utiliser Tone.js playbackRate au lieu de audioElement
                 if (tonePlayer && tonePlayer.buffer) {
-                    tonePlayer.playbackRate = playbackRate;
+                    // Fix: Always use positive magnitude for rate.
+                    // The direction (reverse) is handled by the directionBtn listener which restarts the player.
+                    tonePlayer.playbackRate = Math.abs(playbackRate);
                 }
             }
 
@@ -2285,8 +2305,8 @@
                         const targetVelocityDegPerFrame = (360 / getAnimationDuration(currentRPM)) / 60; // ~2.0 en 33RPM
 
                         // Accélération exponentielle vers la vitesse cible (Taux d'approche)
-                        // 0.02 = Récupération LENTE comme demandé ("retrieve slowly the current speed")
-                        const torqueFactor = 0.02;
+                        // 0.20 = Récupération RAPIDE comme un moteur à couple élevé (Technics like)
+                        const torqueFactor = 0.20;
 
                         scratchVelocity = scratchVelocity + (targetVelocityDegPerFrame - scratchVelocity) * torqueFactor;
 
@@ -2580,10 +2600,35 @@
                 }
             });
 
+            let lastToggleTime = 0;
             directionBtn.addEventListener('click', () => {
+                const now = Date.now();
+                if (now - lastToggleTime < 300) return; // Debounce 300ms
+                lastToggleTime = now;
+
                 isReversed = !isReversed;
                 directionBtn.classList.toggle('active', isReversed);
                 directionBtn.textContent = isReversed ? 'Direction (Forward)' : 'Direction (Reverse)';
+
+                // Restart player to apply direction change robustly
+                if (tonePlayer && tonePlayer.state === 'started') {
+                    // Capture current position before stopping
+                    let pos = audioScratcher.getPosition();
+                    tonePlayer.stop();
+
+                    // Apply reverse property explicitly before restart
+                    tonePlayer.reverse = isReversed;
+
+                    // Ensure non-negative start
+                    if (tonePlayer.buffer) {
+                        pos = Math.max(0, Math.min(pos, tonePlayer.buffer.duration - 0.05));
+                    }
+
+                    // Schedule restart with a small delay to ensure previous source is fully stopped
+                    // preventing overlap "chaos"
+                    tonePlayer.start('+0.05', pos);
+                }
+
                 updateAnimation();
             });
 
@@ -2795,7 +2840,18 @@
                 vinyl.style.animationPlayState = 'running';
 
                 if (tonePlayer && audioScratcher.isInitialized) {
-                    const currentPos = audioScratcher.getPosition();
+                    let currentPos = audioScratcher.getPosition();
+                    // Fix: Ensure start time is never negative to avoid Tone.js RangeError
+                    currentPos = Math.max(0, currentPos);
+
+                    // Also ensure we don't start past the end
+                    if (tonePlayer.buffer) {
+                        currentPos = Math.min(currentPos, tonePlayer.buffer.duration - 0.05);
+                    }
+
+                    // Essential: Restore the reverse state which might have been cleared by scratching
+                    tonePlayer.reverse = isReversed;
+
                     tonePlayer.start('+0', currentPos);
                 }
                 updateAudioPlaybackRate();
