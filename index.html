@@ -2344,11 +2344,12 @@
                 const oldRotation = previousScratchRotation;
 
                 // === SYNCHRONISATION AUDIO ABSOLUE (NO DRIFT) ===
-                if (isRunning && audioScratcher.isInitialized) {
+                // MODIFICATION: Synchroniser TOUJOURS pendant le scratch, même si la musique ne joue pas
+                if (audioScratcher.isInitialized && isScratching) {
 
                     // 1. GESTION DU GHOST PLAYBACK (Arrêt si immobile)
                     // Si on ne bouge plus la souris depuis > 100ms, forcer la vélocité à 0
-                    if (isScratching && (Date.now() - lastMoveTime > 100)) {
+                    if (Date.now() - lastMoveTime > 100) {
                         scratchVelocity *= 0.1; // Decay rapide
                     }
 
@@ -2360,28 +2361,26 @@
                     // Note: scratchRotation accumule les tours (n'est pas modulo 360)
                     const totalRotationDelta = scratchRotation - anchorRotation;
 
-                    if (Math.abs(totalRotationDelta) > 0.01 || isScratching) {
-                        // SECONDS_PER_DEGREE constant
-                        // 360 degrés = BASE_DURATION secondes (ex: 3.0s)
-                        const secondsPerDegree = BASE_DURATION / 360;
+                    // SECONDS_PER_DEGREE constant
+                    // 360 degrés = BASE_DURATION secondes (ex: 3.0s)
+                    const secondsPerDegree = BASE_DURATION / 360;
 
-                        // Temps théorique exact
-                        const timeShift = totalRotationDelta * secondsPerDegree;
-                        let newTime = anchorAudioTime + timeShift;
+                    // Temps théorique exact
+                    const timeShift = totalRotationDelta * secondsPerDegree;
+                    let newTime = anchorAudioTime + timeShift;
 
-                        // Clamper le temps
-                        newTime = Math.max(0, Math.min(audioScratcher.duration, newTime));
+                    // Clamper le temps
+                    newTime = Math.max(0, Math.min(audioScratcher.duration, newTime));
 
-                        // Calcul vélocité normalisée pour le pitch
-                        const velocityNormalized = scratchVelocity / 6;
+                    // Calcul vélocité normalisée pour le pitch
+                    const velocityNormalized = scratchVelocity / 6;
 
-                        // Update ToneJS
-                        audioScratcher.updatePosition(newTime, velocityNormalized);
+                    // Update ToneJS - TOUJOURS synchroniser l'audio avec la rotation du disque
+                    audioScratcher.updatePosition(newTime, velocityNormalized);
 
-                        // Fallback HTML Audio
-                        if (Math.abs(audioElement.currentTime - newTime) > 0.1) {
-                            audioElement.currentTime = newTime;
-                        }
+                    // Fallback HTML Audio
+                    if (Math.abs(audioElement.currentTime - newTime) > 0.1) {
+                        audioElement.currentTime = newTime;
                     }
                 }
 
@@ -2432,10 +2431,10 @@
                         // Afficher le message de démarrage
                         startingMessage.classList.add('visible');
 
-                        // Cacher le message un peu avant la musique (à 1.7 secondes)
+                        // Cacher le message rapidement (à 0.6 secondes)
                         setTimeout(() => {
                             startingMessage.classList.remove('visible');
-                        }, 1700);
+                        }, 600);
 
                         // Jouer le son du bras de tourne-disque
                         try {
@@ -2453,15 +2452,15 @@
                         // Séquence : Rest -> Lifted -> Playing position (mouvements rapides)
                         setTimeout(() => {
                             moveTonearmToPosition(ARM_REST_Z_ANGLE, ARM_HEIGHT_LIFTED); // Lever le bras
-                        }, 100);
+                        }, 50);
 
                         setTimeout(() => {
                             moveTonearmToPosition(ARM_START_Z_ANGLE, ARM_HEIGHT_LIFTED); // Déplacer au-dessus du disque
-                        }, 700);
+                        }, 250);
 
                         setTimeout(() => {
                             moveTonearmToPosition(ARM_START_Z_ANGLE, ARM_HEIGHT_PLAYING); // Descendre sur le disque
-                        }, 1300);
+                        }, 500);
 
                         setTimeout(() => {
                             // Démarrer l'animation du bras et l'audio APRÈS que le bras soit posé
@@ -2497,7 +2496,7 @@
                                     console.log(`🎵 Audio redémarré à ${currentPos.toFixed(2)}s`);
                                 }
                             }
-                        }, 2000); // Total: 2 secondes au lieu de 4.6 secondes
+                        }, 750); // Total: 0.75 secondes (3x plus rapide!)
                     } else {
                         // En mode skip (initialisation), ne pas jouer l'audio
                         if (tonePlayer && tonePlayer.state === 'started') {
@@ -2646,11 +2645,13 @@
                 isDragging = false;
                 scene.style.cursor = 'default'; // Curseur normal pendant le scratch
 
-                // Démarrer le scratch audio granulaire seulement si la musique joue
-                if (isRunning) {
-                    audioScratcher.startScratch(audioElement.currentTime);
-                    // Mettre en pause l'audio HTML (le scratcher prend le relais)
-                    audioElement.pause();
+                // Démarrer le scratch audio granulaire TOUJOURS (même si la musique ne joue pas)
+                // Obtenir la position actuelle de l'audio
+                let currentAudioPosition = audioScratcher.getPosition();
+                audioScratcher.startScratch(currentAudioPosition);
+                // Mettre en pause l'audio HTML (le scratcher prend le relais)
+                if (isRunning && tonePlayer && tonePlayer.state === 'started') {
+                    tonePlayer.stop();
                 }
 
                 // Sauvegarder la rotation actuelle
@@ -2746,10 +2747,11 @@
                 // Désactiver le drag 3D de la scène pendant le scratch
                 isDragging = false;
 
-                // Démarrer le scratch audio granulaire seulement si la musique joue
-                if (isRunning) {
-                    audioScratcher.startScratch(audioElement.currentTime);
-                    audioElement.pause();
+                // Démarrer le scratch audio granulaire TOUJOURS (même si la musique ne joue pas)
+                let currentAudioPosition = audioScratcher.getPosition();
+                audioScratcher.startScratch(currentAudioPosition);
+                if (isRunning && tonePlayer && tonePlayer.state === 'started') {
+                    tonePlayer.stop();
                 }
 
                 const transform = window.getComputedStyle(vinyl).transform;
@@ -2864,6 +2866,14 @@
             setSpeedAndKnob(0, setStopBtn, true); // skipAnimation = true pour l'initialisation
             updateAnimation(); // Initialiser la position du pitch knob
             moveTonearmToPosition(ARM_REST_Z_ANGLE, ARM_HEIGHT_REST); // Position initiale sur le repos
+
+            // NOUVEAU: Précharger l'audio pour permettre le scratch dès le début
+            console.log('🎵 Préchargement de l\'audio pour le scratch...');
+            audioScratcher.loadFromAudioElement().then(() => {
+                console.log('✅ Audio préchargé - Scratch disponible même sans lecture');
+            }).catch(err => {
+                console.warn('⚠️ Erreur préchargement audio:', err);
+            });
         });
     </script>
 </body>
