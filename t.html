@@ -324,6 +324,12 @@
 
         // --- DIRECTION ---
         directionButton.addEventListener('click', () => {
+            // Sauvegarder la position audio actuelle avant de changer de direction
+            let currentPosition = 0;
+            if (player && player.loaded) {
+                currentPosition = player.now();
+            }
+            
             state.directionFactor *= -1; 
             if (state.directionFactor === 1.0) {
                 directionButton.textContent = '!'; 
@@ -332,6 +338,13 @@
                 directionButton.textContent = 'Reverse'; 
                 directionButton.classList.add('reverse-active');
             }
+            
+            // Restaurer la position audio après le changement de direction
+            // pour que le disque continue exactement où il était
+            if (player && player.loaded && currentPosition > 0) {
+                player.seek(currentPosition);
+            }
+            
             showOverlayBriefly();
             updatePlaybackRate(0); 
         });

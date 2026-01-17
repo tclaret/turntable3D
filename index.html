@@ -316,6 +316,108 @@
             display: block;
         }
 
+        .axis-legend {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 100px;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            display: none;
+            z-index: 1001;
+        }
+
+        .scene.debug .axis-legend {
+            display: block;
+        }
+
+        .axis-legend-title {
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .axis-legend-container {
+            width: 100%;
+            height: 70px;
+            position: relative;
+            transform-style: preserve-3d;
+            perspective: 300px;
+        }
+
+        .axis-legend-inner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform: rotateX(45deg) rotateZ(-10deg);
+            transform-style: preserve-3d;
+        }
+
+        .axis-legend-line {
+            position: absolute;
+            width: 2px;
+            transform-origin: center center;
+            transform-style: preserve-3d;
+        }
+
+        .axis-legend-x {
+            height: 40px;
+            background: linear-gradient(to bottom, #ff0000, #aa0000);
+            left: 50%;
+            top: 50%;
+            transform: translateX(-50%) translateY(-50%) rotateY(90deg) translateZ(20px);
+        }
+
+        .axis-legend-y {
+            height: 40px;
+            background: linear-gradient(to bottom, #00ff00, #00aa00);
+            left: 50%;
+            top: 50%;
+            transform: translateX(-50%) translateY(-50%) translateZ(0px) translateY(-20px);
+        }
+
+        .axis-legend-z {
+            height: 40px;
+            background: linear-gradient(to bottom, #0000ff, #0000aa);
+            left: 50%;
+            top: 50%;
+            transform: translateX(-50%) translateY(-50%) rotateX(90deg) translateZ(20px);
+        }
+
+        .axis-legend-label {
+            position: absolute;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            text-shadow: 0 0 3px #000;
+        }
+
+        .axis-legend-label.x {
+            color: #ff6666;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .axis-legend-label.y {
+            color: #66ff66;
+            left: 50%;
+            top: 5px;
+            transform: translateX(-50%);
+        }
+
+        .axis-legend-label.z {
+            color: #6666ff;
+            left: 50%;
+            bottom: 5px;
+            transform: translateX(-50%);
+        }
+
         .debug-axis {
             position: absolute;
             top: 50%;
@@ -327,6 +429,21 @@
 
         .scene.debug .debug-axis {
             opacity: 1;
+        }
+
+        .debug-axis::before {
+            content: '0';
+            position: absolute;
+            left: -15px;
+            top: -25px;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            text-shadow: none;
         }
 
         .axis-x,
@@ -343,14 +460,26 @@
             transform: translateX(0);
         }
 
-        .axis-x::after {
-            content: 'X';
+        .axis-x::before {
+            content: '-X';
             position: absolute;
-            right: -20px;
+            left: -30px;
             top: -10px;
             color: red;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14px;
+            text-shadow: 0 0 3px #000;
+        }
+
+        .axis-x::after {
+            content: '+X';
+            position: absolute;
+            right: -30px;
+            top: -10px;
+            color: red;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 0 3px #000;
         }
 
         .axis-y {
@@ -358,14 +487,26 @@
             transform: rotateZ(90deg);
         }
 
-        .axis-y::after {
-            content: 'Y';
+        .axis-y::before {
+            content: '-Y';
             position: absolute;
-            right: -20px;
+            left: -30px;
             top: -10px;
             color: green;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14px;
+            text-shadow: 0 0 3px #000;
+        }
+
+        .axis-y::after {
+            content: '+Y';
+            position: absolute;
+            right: -30px;
+            top: -10px;
+            color: green;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 0 3px #000;
         }
 
         .axis-z {
@@ -373,14 +514,26 @@
             transform: rotateY(90deg);
         }
 
-        .axis-z::after {
-            content: 'Z';
+        .axis-z::before {
+            content: '-Z';
             position: absolute;
-            right: -20px;
+            left: -30px;
             top: -10px;
             color: blue;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14px;
+            text-shadow: 0 0 3px #000;
+        }
+
+        .axis-z::after {
+            content: '+Z';
+            position: absolute;
+            right: -30px;
+            top: -10px;
+            color: blue;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 0 3px #000;
         }
 
         /* Boîtes de délimitation pour debug */
@@ -695,23 +848,13 @@
             position: absolute;
             left: 50%;
             top: 3%;
-            transform: translateX(-50%) translateX(-34vmin) translateY(50vmin) translateZ(5vmin) rotateZ(345deg);
+            transform: translateX(-50%) translateX(-32vmin) translateY(52vmin) translateZ(7vmin) rotateZ(348deg);
             transform-style: preserve-3d;
             z-index: 10;
-            cursor: pointer;
         }
 
         .selector-label {
-            position: absolute;
-            top: -2vmin;
-            left: 50%;
-            transform: translateX(calc(-50% + 2vmin)) rotateZ(15deg);
-            font-size: 1.3vmin;
-            font-weight: bold;
-            color: #000;
-            white-space: nowrap;
-            text-shadow: 0 0 3px rgba(255, 255, 255, 0.5);
-            transform-origin: center center;
+            display: none;
         }
 
         .selector-base {
@@ -732,6 +875,83 @@
             transition: transform 0.3s ease-in-out;
             transform-style: preserve-3d;
             filter: drop-shadow(0 0.8vmin 1.5vmin rgba(0, 0, 0, 0.5));
+        }
+
+        .speed-points-container {
+            position: absolute;
+            top: -0.8vmin;
+            left: 50%;
+            transform: translateX(-50%) rotateZ(0deg);
+            width: 8vmin;
+            height: 3.5vmin;
+            pointer-events: none;
+            z-index: 11;
+        }
+
+        .speed-point {
+            position: absolute;
+            width: 1.5vmin;
+            height: 1.5vmin;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            pointer-events: all;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 0.5vmin rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .speed-point::after {
+            content: attr(data-label);
+            position: absolute;
+            font-size: 1.2vmin;
+            font-weight: bold;
+            color: rgba(0, 0, 0, 0.7);
+            white-space: nowrap;
+            text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+            pointer-events: none;
+        }
+
+        .speed-point-33::after {
+            right: 1.5vmin;
+        }
+
+        .speed-point-stop::after {
+            top: -1.2vmin;
+        }
+
+        .speed-point-45::after {
+            left: 1.5vmin;
+        }
+
+        .speed-point:hover {
+            background: rgba(255, 255, 255, 0.5);
+            transform: scale(1.2);
+        }
+
+        .speed-point.active {
+            background: rgba(0, 255, 0, 0.8);
+            box-shadow: 0 0 1vmin rgba(0, 255, 0, 0.8);
+        }
+
+        .speed-point-33 {
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .speed-point-stop {
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+        }
+
+        .speed-point-45 {
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
         }
 
         .selector-base::before {
@@ -849,8 +1069,8 @@
             /* Y=-1 */
             z-index: 50;
 
-            transform: translate(-50%, -50%) translateZ(0vmin);
-            /* Z=0 */
+            transform: translate(-50%, -50%) translateZ(9vmin);
+            /* Z=9 (above turntable-base at 2vmin and record at 6.5vmin) */
             transform-style: preserve-3d;
             transition: transform 0.6s ease-in-out;
 
@@ -877,7 +1097,7 @@
             height: 5vmin;
             border: 0.8vmin solid #222;
             border-radius: 50%;
-            transform: translate(-50%, -50%) rotateX(45deg);
+            transform: translate(-50%, -50%) translateZ(8vmin) rotateX(45deg);
             box-shadow: 0 0.2vmin 0.5vmin rgba(0, 0, 0, 0.5);
             transform-style: preserve-3d;
         }
@@ -902,7 +1122,7 @@
             width: 3vmin;
             height: 4vmin;
             /* Plus court, plus trapu */
-            transform: translate(-50%, -50%) translateX(6vmin) translateZ(3vmin) rotateY(90deg);
+            transform: translate(-50%, -50%) translateX(6vmin) translateZ(8vmin) rotateY(90deg);
             transform-style: preserve-3d;
             background: linear-gradient(90deg, #111, #333 50%, #111);
             border-radius: 50%;
@@ -939,12 +1159,12 @@
 
         .tonearm-image {
             width: 28vmin;
-            height: 6vmin;
+            height: 9vmin;
             position: absolute;
             top: 50%;
             left: 50%;
             transform-origin: 0% 50%;
-            transform: translate(-6%, -50%) translateZ(8vmin) rotateZ(180deg);
+            transform: translate(-6%, -50%) translateZ(9vmin) rotateZ(180deg);
             transform-style: preserve-3d;
         }
 
@@ -994,7 +1214,7 @@
             position: absolute;
             left: 50%;
             top: 3%;
-            transform: translateX(-50%) translateX(28vmin) translateY(50vmin) translateZ(5vmin);
+            transform: translateX(-50%) translateX(28vmin) translateY(50vmin) translateZ(8vmin);
             transform-style: preserve-3d;
             width: 1.5vmin;
             height: 5vmin;
@@ -1310,19 +1530,7 @@
         /* Overlay de sélection de vitesse      */
         /* ------------------------------------ */
         .speed-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 200;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
+            display: none;
         }
 
         .speed-overlay.active {
@@ -1447,6 +1655,20 @@
         .zoom-btn:active {
             transform: scale(0.9);
             background: rgba(0, 0, 0, 0.9);
+        }
+
+        /* Ajustements pour mobile landscape */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .speed-selector-container {
+                transform: translateX(-50%) translateX(-25vmin) translateY(40vmin) translateZ(5vmin) rotateZ(348deg);
+            }
+
+            .scene {
+                width: 85vw;
+                height: 85vw;
+                max-width: 500px;
+                max-height: 500px;
+            }
         }
     </style>
 </head>
@@ -1641,16 +1863,20 @@
             <div class="debug-box debug-box-arm"></div>
 
             <!-- Lignes de debug pour le bras -->
-            <div class="debug-arm-pivot" style="left: 75%; top: 55%;"></div>
-            <div class="debug-arm-center" style="left: 50%; top: 55%;"></div>
-            <div class="debug-arm-line" style="left: 75%; top: 55%; width: 30vmin;"></div>
-            <div class="debug-arm-label" style="left: 75%; top: 52%;">Pivot Bras (75%, 55%)</div>
-            <div class="debug-arm-label" style="left: 50%; top: 52%;">Centre Disque (50%, 55%)</div>
-            <div class="debug-arm-label" style="left: 75%; top: 58%;">Z: 5vmin</div>
+            <div class="debug-arm-pivot" style="left: 85%; top: 65%;"></div>
+            <div class="debug-arm-center" style="left: 60%; top: 65%;"></div>
+            <div class="debug-arm-line" style="left: 85%; top: 65%; width: 30vmin;"></div>
+            <div class="debug-arm-label" style="left: 85%; top: 62%;">Pivot Bras (85%, 65%)</div>
+            <div class="debug-arm-label" style="left: 60%; top: 62%;">Centre Disque (60%, 65%)</div>
+            <div class="debug-arm-label" style="left: 85%; top: 68%;">Z: 5vmin</div>
 
             <div class="turntable-base">
                 <div class="speed-selector-container">
-                    <div class="selector-label">33 — STOP — 45</div>
+                    <div class="speed-points-container">
+                        <div class="speed-point speed-point-33" data-speed="33" data-label="33" title="33 RPM"></div>
+                        <div class="speed-point speed-point-stop active" data-speed="stop" data-label="STOP" title="STOP"></div>
+                        <div class="speed-point speed-point-45" data-speed="45" data-label="45" title="45 RPM"></div>
+                    </div>
                     <div class="selector-base">
                         <div id="speed-knob" class="selector-knob"></div>
                     </div>
@@ -1669,7 +1895,7 @@
                     <div class="tonearm-gimbal-ring"></div>
                     <div class="tonearm-counterweight"></div>
                     <div class="tonearm-image">
-                        <svg viewBox="0 0 280 60" xmlns="http://www.w3.org/2000/svg">
+                        <svg viewBox="-60 0 340 60" xmlns="http://www.w3.org/2000/svg">
                             <defs>
                                 <linearGradient id="armGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                                     <stop offset="0%" style="stop-color:#d0d0d0;stop-opacity:1" />
@@ -1683,10 +1909,13 @@
                                     <stop offset="100%" style="stop-color:#fff;stop-opacity:0" />
                                 </linearGradient>
                             </defs>
-                            <!-- Updated sleek S-curve -->
-                            <path d="M 0,30 L 20,30 C 60,30 80,45 120,42 C 160,39 200,28 240,32 C 260,34 270,34 275,34 
-                                 L 275,26 C 270,26 260,26 240,24 C 200,20 160,31 120,34 C 80,37 60,22 20,22 L 0,22 Z"
+                            <!-- Extension vers l'arrière jusqu'au pivot -->
+                            <path d="M -50,30 L 0,30 L 20,30 C 60,30 80,45 120,42 C 160,39 200,28 240,32 C 260,34 270,34 275,34 
+                                 L 275,26 C 270,26 260,26 240,24 C 200,20 160,31 120,34 C 80,37 60,22 20,22 L 0,22 L -50,22 Z"
                                 fill="url(#armGradient)" stroke="#666" stroke-width="0.5" />
+                            <!-- Contrepoids à l'arrière -->
+                            <circle cx="-40" cy="28" r="8" fill="#555" stroke="#333" stroke-width="0.5" />
+                            <circle cx="-40" cy="28" r="6" fill="url(#armGradient)" />
                             <!-- Shine effect -->
                             <path d="M 5,26 C 60,26 80,41 120,38 C 160,35 200,24 240,28 C 255,29 265,29 270,29"
                                 fill="none" stroke="url(#armShine)" stroke-width="4" opacity="0.5" />
@@ -1708,6 +1937,21 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Légende des axes 3D -->
+    <div class="axis-legend">
+        <div class="axis-legend-title">Axes 3D</div>
+        <div class="axis-legend-container">
+            <div class="axis-legend-inner">
+                <div class="axis-legend-line axis-legend-x"></div>
+                <div class="axis-legend-line axis-legend-y"></div>
+                <div class="axis-legend-line axis-legend-z"></div>
+            </div>
+        </div>
+        <div class="axis-legend-label x">X</div>
+        <div class="axis-legend-label y">Y</div>
+        <div class="axis-legend-label z">Z</div>
     </div>
 
     <!-- Contrôles de débogage -->
@@ -1762,7 +2006,7 @@
             const vinyl = document.querySelector('.vinyl-record');
             const recordContainer = document.querySelector('.record-container');
             const selectorBase = document.querySelector('.selector-base');
-            const selectorContainer = document.querySelector('.speed-selector-container');
+            const speedPoints = document.querySelectorAll('.speed-point');
             const set33Btn = document.getElementById('set33-btn');
             const setStopBtn = document.getElementById('setstop-btn');
             const set45Btn = document.getElementById('set45-btn');
@@ -1770,8 +2014,6 @@
             const pitchSlider = document.getElementById('pitch-slider');
             const tonearmContainer = document.getElementById('tonearm-container');
             const pitchKnob = document.getElementById('pitch-knob');
-            const speedOverlay = document.getElementById('speed-overlay');
-            const speedOptions = document.querySelectorAll('.speed-option');
 
             // Contrôles de zoom mobile
             const zoomInBtn = document.getElementById('zoom-in');
@@ -2112,10 +2354,11 @@
                 getPosition() {
                     // Si le player est en lecture, retourner sa position réelle
                     if (tonePlayer && tonePlayer.state === 'started') {
-                        return tonePlayer.toSeconds(tonePlayer.immediate());
+                        const pos = tonePlayer.toSeconds(tonePlayer.immediate());
+                        return Math.max(0, pos); // Éviter les valeurs négatives
                     }
                     // Sinon retourner la dernière position connue
-                    return this.currentPlaybackPosition;
+                    return Math.max(0, this.currentPlaybackPosition); // Éviter les valeurs négatives
                 }
             }
 
@@ -2239,6 +2482,46 @@
                 const maxPitch = 1.5;
                 const minTop = 90; // %
                 const maxTop = 10; // %
+                const topPosition = maxTop + (minTop - maxTop) * (maxPitch - pitchFactor) / (maxPitch - minPitch);
+                pitchKnob.style.top = `${topPosition}%`;
+
+                // Mettre à jour la vitesse de l'audio
+                updateAudioPlaybackRate();
+            }
+
+            function updateAnimationWithCurrentRotation() {
+                const pitchFactor = parseFloat(pitchSlider.value);
+                let finalDuration;
+
+                if (isRunning) {
+                    finalDuration = (currentSpeedDuration / pitchFactor).toFixed(2);
+                } else {
+                    finalDuration = 1000;
+                }
+
+                // Définir le nom de l'animation et la durée
+                vinyl.style.animationName = isReversed ? 'spin-reverse' : 'spin';
+                vinyl.style.animationDuration = `${finalDuration}s`;
+                vinyl.style.animationIterationCount = 'infinite'; // Assurer la répétition infinie
+                vinyl.style.animationTimingFunction = 'linear'; // Assurer la vitesse constante
+                
+                // Calculer le delay d'animation pour commencer à la position actuelle
+                const currentCyclePosition = (scratchRotation % 360 + 360) % 360;
+                const cycleCompleteRatio = currentCyclePosition / 360;
+                
+                if (isReversed) {
+                    vinyl.style.animationDelay = `-${(1 - cycleCompleteRatio) * finalDuration}s`;
+                } else {
+                    vinyl.style.animationDelay = `-${cycleCompleteRatio * finalDuration}s`;
+                }
+                
+                vinyl.style.animationPlayState = isRunning ? 'running' : 'paused';
+
+                // Mettre à jour la position du pitch knob visuel
+                const minPitch = 0.5;
+                const maxPitch = 1.5;
+                const minTop = 90;
+                const maxTop = 10;
                 const topPosition = maxTop + (minTop - maxTop) * (maxPitch - pitchFactor) / (maxPitch - minPitch);
                 pitchKnob.style.top = `${topPosition}%`;
 
@@ -2413,7 +2696,41 @@
             function moveTonearmToPosition(targetAngle, targetHeight) {
                 armState = targetHeight === ARM_HEIGHT_REST ? 'rest' :
                     targetHeight === ARM_HEIGHT_LIFTED ? 'lifted' : 'playing';
-                tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(0vmin) rotateZ(${targetAngle}deg) rotateX(${targetHeight}deg)`;
+                tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(9vmin) rotateZ(${targetAngle}deg) rotateX(${targetHeight}deg)`;
+            }
+
+            // Fonction pour démarrer la lecture audio
+            function startAudioPlayback() {
+                // Charger le buffer audio pour le scratch avec Tone.js si pas encore fait
+                if (!audioScratcher.isInitialized) {
+                    audioScratcher.loadFromAudioElement().then(() => {
+                        console.log('✅ Audio scratcher Tone.js prêt');
+                        // Démarrer la lecture une fois chargé
+                        if (tonePlayer) {
+                            tonePlayer.start();
+                            updateAudioPlaybackRate();
+                        }
+                    });
+                } else {
+                    // Si déjà chargé, continuer à partir de la position actuelle
+                    if (tonePlayer && tonePlayer.buffer) {
+                        // Récupérer la position actuelle si disponible
+                        let currentPos = audioScratcher.isInitialized ? audioScratcher.getPosition() : 0;
+
+                        // S'assurer que la position est valide
+                        const duration = tonePlayer.buffer.duration;
+                        currentPos = Math.max(0, Math.min(currentPos, duration - 0.1));
+
+                        if (tonePlayer.state === 'started') {
+                            tonePlayer.stop(); // Arrêter si déjà en lecture
+                        }
+
+                        // Redémarrer à partir de la position actuelle (ou du début si position = 0)
+                        tonePlayer.start('+0', currentPos);
+                        updateAudioPlaybackRate();
+                        console.log(`🎵 Audio redémarré à ${currentPos.toFixed(2)}s`);
+                    }
+                }
             }
 
             function setSpeedAndKnob(rpm, button, skipAnimation = false) {
@@ -2427,14 +2744,27 @@
                     isRunning = true; // Le disque commence à tourner immédiatement
                     baseRotation = (rpm === RPM_33) ? -20 : 40;
 
+                    // Arrêter la boucle de scratch/physique si active
+                    if (scratchAnimationFrame) {
+                        cancelAnimationFrame(scratchAnimationFrame);
+                        scratchAnimationFrame = null;
+                    }
+
+                    // Capturer la position actuelle avant de restaurer l'animation
+                    const computedTransform = getComputedStyle(vinyl).transform;
+                    if (computedTransform && computedTransform !== 'none') {
+                        const matrix = new DOMMatrix(computedTransform);
+                        scratchRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
+                    }
+
                     if (!skipAnimation) {
                         // Afficher le message de démarrage
                         startingMessage.classList.add('visible');
 
-                        // Cacher le message rapidement (à 0.6 secondes)
+                        // Cacher le message rapidement
                         setTimeout(() => {
                             startingMessage.classList.remove('visible');
-                        }, 600);
+                        }, 400);
 
                         // Jouer le son du bras de tourne-disque
                         try {
@@ -2452,15 +2782,15 @@
                         // Séquence : Rest -> Lifted -> Playing position (mouvements rapides)
                         setTimeout(() => {
                             moveTonearmToPosition(ARM_REST_Z_ANGLE, ARM_HEIGHT_LIFTED); // Lever le bras
-                        }, 50);
+                        }, 30);
 
                         setTimeout(() => {
                             moveTonearmToPosition(ARM_START_Z_ANGLE, ARM_HEIGHT_LIFTED); // Déplacer au-dessus du disque
-                        }, 250);
+                        }, 150);
 
                         setTimeout(() => {
                             moveTonearmToPosition(ARM_START_Z_ANGLE, ARM_HEIGHT_PLAYING); // Descendre sur le disque
-                        }, 500);
+                        }, 300);
 
                         setTimeout(() => {
                             // Démarrer l'animation du bras et l'audio APRÈS que le bras soit posé
@@ -2468,35 +2798,9 @@
                             if (animationFrameId) cancelAnimationFrame(animationFrameId);
                             animationFrameId = requestAnimationFrame(animateTonearm);
 
-                            // Charger le buffer audio pour le scratch avec Tone.js si pas encore fait
-                            if (!audioScratcher.isInitialized) {
-                                audioScratcher.loadFromAudioElement().then(() => {
-                                    console.log('✅ Audio scratcher Tone.js prêt');
-                                    // Démarrer la lecture une fois chargé
-                                    if (tonePlayer) {
-                                        tonePlayer.start();
-                                    }
-                                });
-                            } else {
-                                // Si déjà chargé, continuer à partir de la position actuelle
-                                if (tonePlayer && tonePlayer.buffer) {
-                                    // Récupérer la position actuelle si disponible
-                                    let currentPos = audioScratcher.isInitialized ? audioScratcher.getPosition() : 0;
-
-                                    // S'assurer que la position est valide
-                                    const duration = tonePlayer.buffer.duration;
-                                    currentPos = Math.max(0, Math.min(currentPos, duration - 0.1));
-
-                                    if (tonePlayer.state === 'started') {
-                                        tonePlayer.stop(); // Arrêter si déjà en lecture
-                                    }
-
-                                    // Redémarrer à partir de la position actuelle (ou du début si position = 0)
-                                    tonePlayer.start('+0', currentPos);
-                                    console.log(`🎵 Audio redémarré à ${currentPos.toFixed(2)}s`);
-                                }
-                            }
-                        }, 750); // Total: 0.75 secondes (3x plus rapide!)
+                            // Démarrer l'audio
+                            startAudioPlayback();
+                        }, 450); // Total: 0.45 secondes (plus rapide!)
                     } else {
                         // En mode skip (initialisation), ne pas jouer l'audio
                         if (tonePlayer && tonePlayer.state === 'started') {
@@ -2507,7 +2811,28 @@
                 } else { // STOP (rpm = 0)
                     currentSpeedDuration = 0;
                     isRunning = false;
-                    baseRotation = 10;
+                    baseRotation = 0; // Aligné avec le centre du point STOP
+
+                    // Capturer la rotation actuelle avant d'arrêter
+                    const computedTransform = getComputedStyle(vinyl).transform;
+                    if (computedTransform && computedTransform !== 'none') {
+                        const matrix = new DOMMatrix(computedTransform);
+                        scratchRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
+                    }
+
+                    // Désactiver l'animation CSS et appliquer la rotation actuelle
+                    vinyl.style.animation = 'none';
+                    vinyl.style.transform = `translate(-50%, -50%) rotateZ(${scratchRotation}deg)`;
+                    
+                    // Calculer la vélocité actuelle basée sur la vitesse de rotation
+                    const pitchFactor = parseFloat(pitchSlider.value);
+                    const rotationSpeed = (360 / getAnimationDuration(currentRPM || RPM_33)) / 60; // degrés par frame
+                    scratchVelocity = rotationSpeed * pitchFactor * (isReversed ? -1 : 1);
+
+                    // Démarrer la physique de décélération
+                    if (!scratchAnimationFrame) {
+                        scratchAnimationFrame = requestAnimationFrame(applyScratch);
+                    }
 
                     // Arrêter l'audio Tone.js
                     if (tonePlayer && tonePlayer.state === 'started') {
@@ -2537,36 +2862,39 @@
                     }
                 }
 
+                // Mettre à jour les points visuels
+                speedPoints.forEach(point => point.classList.remove('active'));
+                
+                if (rpm === RPM_33) {
+                    document.querySelector('.speed-point-33').classList.add('active');
+                } else if (rpm === RPM_45) {
+                    document.querySelector('.speed-point-45').classList.add('active');
+                } else {
+                    document.querySelector('.speed-point-stop').classList.add('active');
+                }
+
                 selectorBase.style.transform = `rotateZ(${baseRotation}deg)`;
                 button.classList.add('active');
 
-                updateAnimation();
+                // Appeler la bonne fonction selon le cas
+                if (rpm === RPM_33 || rpm === RPM_45) {
+                    updateAnimationWithCurrentRotation(); // Restaurer l'animation avec la position actuelle
+                    
+                    // Si on vient d'un STOP, redémarrer l'audio (mais pas si skipAnimation)
+                    if (!skipAnimation && tonePlayer && tonePlayer.state !== 'started') {
+                        startAudioPlayback();
+                    }
+                } else {
+                    updateAnimation(); // Simple mise à jour pour STOP
+                }
             }
 
-            // Événements
-            set33Btn.addEventListener('click', () => setSpeedAndKnob(RPM_33, set33Btn));
-            setStopBtn.addEventListener('click', () => setSpeedAndKnob(0, setStopBtn));
-            set45Btn.addEventListener('click', () => setSpeedAndKnob(RPM_45, set45Btn));
-
-            // Ouvrir l'overlay au clic sur le speed selector
-            selectorContainer.addEventListener('click', () => {
-                speedOverlay.classList.add('active');
-            });
-
-            // Fermer l'overlay en cliquant en dehors du panel
-            speedOverlay.addEventListener('click', (e) => {
-                if (e.target === speedOverlay) {
-                    speedOverlay.classList.remove('active');
-                }
-            });
-
-            // Gérer la sélection de vitesse dans l'overlay
-            speedOptions.forEach(option => {
-                option.addEventListener('click', () => {
-                    const speed = option.dataset.speed;
-                    let rpm;
-                    let btn;
-
+            // Événements des points de sélection
+            speedPoints.forEach(point => {
+                point.addEventListener('click', () => {
+                    const speed = point.dataset.speed;
+                    let rpm, btn;
+                    
                     if (speed === '33') {
                         rpm = RPM_33;
                         btn = set33Btn;
@@ -2577,18 +2905,15 @@
                         rpm = 0;
                         btn = setStopBtn;
                     }
-
-                    // Mettre à jour la sélection visuelle
-                    speedOptions.forEach(opt => opt.classList.remove('selected'));
-                    option.classList.add('selected');
-
-                    // Appliquer la vitesse
+                    
                     setSpeedAndKnob(rpm, btn);
-
-                    // Fermer l'overlay
-                    speedOverlay.classList.remove('active');
                 });
             });
+
+            // Événements des boutons UI (panneau de contrôle)
+            set33Btn.addEventListener('click', () => setSpeedAndKnob(RPM_33, set33Btn));
+            setStopBtn.addEventListener('click', () => setSpeedAndKnob(0, setStopBtn));
+            set45Btn.addEventListener('click', () => setSpeedAndKnob(RPM_45, set45Btn));
 
             pitchSlider.addEventListener('input', () => {
                 if (isRunning) {
@@ -2604,6 +2929,18 @@
                 const now = Date.now();
                 if (now - lastToggleTime < 300) return; // Debounce 300ms
                 lastToggleTime = now;
+
+                // Capturer la position de rotation actuelle du disque avant de changer
+                const computedTransform = getComputedStyle(vinyl).transform;
+                let currentRotation = 0;
+                
+                if (computedTransform && computedTransform !== 'none') {
+                    const matrix = new DOMMatrix(computedTransform);
+                    currentRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
+                }
+                
+                // Mettre à jour scratchRotation pour conserver la position actuelle
+                scratchRotation = currentRotation;
 
                 isReversed = !isReversed;
                 directionBtn.classList.toggle('active', isReversed);
@@ -2628,7 +2965,7 @@
                     tonePlayer.start('+0.05', pos);
                 }
 
-                updateAnimation();
+                updateAnimationWithCurrentRotation();
             });
 
             // Gestionnaires d'événements pour le scratching
@@ -2851,10 +3188,28 @@
                         currentPos = Math.min(currentPos, tonePlayer.buffer.duration - 0.05);
                     }
 
+                    // CRITICAL: Stop any existing playback before starting new one
+                    if (tonePlayer.state === 'started') {
+                        tonePlayer.stop();
+                    }
+
                     // Essential: Restore the reverse state which might have been cleared by scratching
                     tonePlayer.reverse = isReversed;
 
-                    tonePlayer.start('+0', currentPos);
+                    // Use try-catch to handle any timing edge cases
+                    try {
+                        // Use a larger delay to ensure clean scheduling and avoid negative timing
+                        const startTime = Tone.now() + 0.05; // 50ms delay
+                        tonePlayer.start(startTime, currentPos);
+                    } catch (e) {
+                        console.warn('⚠️ Erreur démarrage audio, tentative de récupération:', e);
+                        // Fallback: try starting from position 0 with a longer delay
+                        try {
+                            tonePlayer.start(Tone.now() + 0.1, 0);
+                        } catch (e2) {
+                            console.error('❌ Impossible de démarrer l\'audio:', e2);
+                        }
+                    }
                 }
                 updateAudioPlaybackRate();
             }
