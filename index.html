@@ -1385,7 +1385,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            animation: spin var(--speed-33-duration) linear infinite running;
+            animation: spin var(--speed-33-duration) linear infinite paused;
             transform-origin: center center;
             cursor: grab;
             transition: box-shadow 0.2s ease;
@@ -2076,7 +2076,11 @@
     <!-- Charger Tone.js depuis CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <script>
+        console.log('🔧 Script chargé, attente DOMContentLoaded...');
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('✅ DOMContentLoaded déclenché');
+            console.log('🔍 Vérification Tone.js:', typeof Tone !== 'undefined' ? 'OK' : 'ERREUR');
+            
             const vinyl = document.querySelector('.vinyl-record');
             const recordContainer = document.querySelector('.record-container');
             const selectorBase = document.querySelector('.selector-base');
@@ -2088,6 +2092,17 @@
             const pitchSlider = document.getElementById('pitch-slider');
             const tonearmContainer = document.getElementById('tonearm-container');
             const pitchKnob = document.getElementById('pitch-knob');
+            const testScratchBtn = document.getElementById('test-scratch-btn');
+            const startingMessage = document.getElementById('starting-message');
+            const audioTimeCounter = document.getElementById('audio-time-counter');
+            const timeDisplay = document.getElementById('time-display');
+            
+            console.log('🔍 Éléments trouvés:', {
+                vinyl: !!vinyl,
+                set33Btn: !!set33Btn,
+                setStopBtn: !!setStopBtn,
+                set45Btn: !!set45Btn
+            });
 
             // Contrôles de zoom mobile
             const zoomInBtn = document.getElementById('zoom-in');
@@ -2477,6 +2492,11 @@
                     this.wasPlaying = false;
                 }
 
+                // Initialiser le système audio
+                async initialize() {
+                    return await this.loadFromAudioElement();
+                }
+
                 // Charger l'audio avec Tone.js Player
                 async loadFromAudioElement() {
                     try {
@@ -2495,7 +2515,7 @@
                                 this.duration = tonePlayer.buffer.duration;
                                 console.log('✅ Audio chargé avec Tone.js:', this.duration, 'secondes');
 
-                                // Connecter directement à lab sortie
+                                // Connecter directement à la sortie
                                 tonePlayer.toDestination();
                             }
                         });
@@ -2559,12 +2579,12 @@
                             // Jouer le grain
                             tonePlayer.start('+0', this.currentPlaybackPosition, grainDuration);
 
-                            // Programmer l'arrêt du grain
-                            Tone.Transport.scheduleOnce(() => {
-                                if (this.isScratching && tonePlayer.state === 'started') {
+                            // Programmer l'arrêt du grain avec setTimeout
+                            setTimeout(() => {
+                                if (this.isScratching && tonePlayer && tonePlayer.state === 'started') {
                                     tonePlayer.stop();
                                 }
-                            }, '+0.05');
+                            }, 50);
                         } catch (e) {
                             // Silencieux si erreur (player occupé)
                         }
@@ -2619,10 +2639,7 @@
             const scratchIndicator = document.getElementById('scratch-indicator');
             const scratchIndicatorValue = scratchIndicator.querySelector('.speed-value');
             let indicatorTimeout = null;
-            const startingMessage = document.getElementById('starting-message');
-            const audioTimeCounter = document.getElementById('audio-time-counter');
-            const timeDisplay = document.getElementById('time-display');
-            const testScratchBtn = document.getElementById('test-scratch-btn');
+            // startingMessage, audioTimeCounter, timeDisplay, testScratchBtn déjà déclarés plus haut
 
             // Variables pour l'animation du bras
             let animationFrameId = null;
@@ -2631,13 +2648,13 @@
             let armState = 'rest'; // 'rest', 'lifted', 'playing'
 
             // Angles Z de début et de fin pour le mouvement du bras
-            const ARM_REST_Z_ANGLE = -90;    // Position repos sur le support
-            const ARM_START_Z_ANGLE = -80;   // Position de démarrage sur le disque
+            const ARM_REST_Z_ANGLE = -90;    // Position repos sur le support (rotation compensée pour SVG)
+            const ARM_START_Z_ANGLE = -80;   // Position de démarrage sur le disque (très proche du bord)
             const ARM_END_Z_ANGLE = 135;     // Position au centre du disque
             const ARM_TOTAL_PLAY_DURATION_SECONDS = 720; // 12 minutes pour parcourir du bord à l'étiquette centrale
 
             // Hauteurs Z (profondeur 3D) - maintenant en angles de rotation X
-            const ARM_HEIGHT_REST = 0;       // Sur le support (horizontal)
+            const ARM_HEIGHT_REST = -5;      // Sur le support (légèrement incliné vers le bas)
             const ARM_HEIGHT_LIFTED = 15;    // Levé pour déplacer (angle positif)
             const ARM_HEIGHT_PLAYING = 5;    // Sur le disque en lecture (léger angle)
 
@@ -2727,6 +2744,7 @@
             }
 
             function updateAnimationWithCurrentRotation() {
+                console.log('🔄 updateAnimationWithCurrentRotation appelée');
                 const pitchFactor = parseFloat(pitchSlider.value);
                 let finalDuration;
 
@@ -2736,6 +2754,12 @@
                     finalDuration = 1000;
                 }
 
+                console.log('🔄 Animation params:', { isRunning, finalDuration, isReversed, scratchRotation });
+
+                // Réinitialiser les propriétés d'animation
+                vinyl.style.animation = '';  // Reset complet
+                vinyl.style.transform = '';  // Reset transform pour laisser l'animation CSS gérer
+                
                 // Définir le nom de l'animation et la durée
                 vinyl.style.animationName = isReversed ? 'spin-reverse' : 'spin';
                 vinyl.style.animationDuration = `${finalDuration}s`;
@@ -2753,6 +2777,12 @@
                 }
                 
                 vinyl.style.animationPlayState = isRunning ? 'running' : 'paused';
+                
+                console.log('✅ Animation appliquée:', {
+                    playState: vinyl.style.animationPlayState,
+                    duration: vinyl.style.animationDuration,
+                    name: vinyl.style.animationName
+                });
 
                 // Mettre à jour la position du pitch knob visuel
                 const minPitch = 0.5;
@@ -2935,11 +2965,12 @@
 
             // Fonction pour déplacer le bras entre les positions
             function moveTonearmToPosition(targetAngle, targetHeight) {
+                console.log('🎯 moveTonearmToPosition:', { targetAngle, targetHeight });
                 armState = targetHeight === ARM_HEIGHT_REST ? 'rest' :
                     targetHeight === ARM_HEIGHT_LIFTED ? 'lifted' : 'playing';
                 const transform = `translate(-50%, -50%) translateZ(9vmin) rotateZ(${targetAngle}deg) rotateX(${targetHeight}deg)`;
                 tonearmContainer.style.transform = transform;
-                console.log(`🔧 Bras déplacé: angle=${targetAngle}°, height=${targetHeight}°, state=${armState}`);
+                console.log(`🔧 Bras déplacé: angle=${targetAngle}°, height=${targetHeight}°, state=${armState}, transform=${transform}`);
             }
 
             // Fonction pour démarrer la lecture audio
@@ -2977,6 +3008,7 @@
             }
 
             function setSpeedAndKnob(rpm, button, skipAnimation = false) {
+                console.log('📞 setSpeedAndKnob appelée:', { rpm, skipAnimation });
                 [set33Btn, setStopBtn, set45Btn].forEach(btn => btn.classList.remove('active'));
 
                 let baseRotation = 0;
@@ -3156,9 +3188,20 @@
             });
 
             // Événements des boutons UI (panneau de contrôle)
-            set33Btn.addEventListener('click', () => setSpeedAndKnob(RPM_33, set33Btn));
-            setStopBtn.addEventListener('click', () => setSpeedAndKnob(0, setStopBtn));
-            set45Btn.addEventListener('click', () => setSpeedAndKnob(RPM_45, set45Btn));
+            console.log('🔧 Attachement des event listeners...');
+            set33Btn.addEventListener('click', () => {
+                console.log('🎵 Clic sur 33 RPM');
+                setSpeedAndKnob(RPM_33, set33Btn);
+            });
+            setStopBtn.addEventListener('click', () => {
+                console.log('⏹️ Clic sur STOP');
+                setSpeedAndKnob(0, setStopBtn);
+            });
+            set45Btn.addEventListener('click', () => {
+                console.log('🎵 Clic sur 45 RPM');
+                setSpeedAndKnob(RPM_45, set45Btn);
+            });
+            console.log('✅ Event listeners attachés');
 
             pitchSlider.addEventListener('input', () => {
                 if (isRunning) {
