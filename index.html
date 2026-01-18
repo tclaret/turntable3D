@@ -1069,8 +1069,9 @@
             /* Y=-1 */
             z-index: 50;
 
-            transform: translate(-50%, -50%) translateZ(9vmin);
-            /* Z=9 (above turntable-base at 2vmin and record at 6.5vmin) */
+            transform: translate(-50%, -50%) translateZ(7vmin) rotateZ(-90deg) rotateX(-5deg);
+            /* Z=7 (above turntable-base at 2vmin and record at 6.5vmin) */
+            /* Initial position: ARM_REST_Z_ANGLE (-90deg) and ARM_HEIGHT_REST (-5deg) */
             transform-style: preserve-3d;
             transition: transform 0.6s ease-in-out;
 
@@ -1122,7 +1123,7 @@
             width: 3vmin;
             height: 4vmin;
             /* Plus court, plus trapu */
-            transform: translate(-50%, -50%) translateX(6vmin) translateZ(8vmin) rotateY(90deg);
+            transform: translate(-50%, -50%) translateX(6vmin) translateZ(6vmin) rotateY(90deg);
             transform-style: preserve-3d;
             background: linear-gradient(90deg, #111, #333 50%, #111);
             border-radius: 50%;
@@ -1164,7 +1165,7 @@
             top: 50%;
             left: 50%;
             transform-origin: 0% 50%;
-            transform: translate(-6%, -50%) translateZ(9vmin) rotateZ(180deg);
+            transform: translate(-6%, -50%) translateZ(7vmin) rotateZ(180deg);
             transform-style: preserve-3d;
         }
 
@@ -1214,7 +1215,7 @@
             position: absolute;
             left: 50%;
             top: 3%;
-            transform: translateX(-50%) translateX(28vmin) translateY(50vmin) translateZ(8vmin);
+            transform: translateX(-50%) translateX(37vmin) translateY(50vmin) translateZ(6vmin);
             transform-style: preserve-3d;
             width: 1.5vmin;
             height: 5vmin;
@@ -1305,6 +1306,37 @@
             height: 1.5vmin;
             background: #111;
             border: 0.1vmin solid #333;
+        }
+
+        /* Crochet de levée sur la droite de la tête de lecture */
+        .tonearm-lift-hook {
+            position: absolute;
+            right: -0.8vmin;
+            top: -0.6vmin;
+            width: 1.2vmin;
+            height: 1.2vmin;
+            background: transparent;
+            border: 0.2vmin solid #666;
+            border-bottom: none;
+            border-left: none;
+            border-radius: 0 0.8vmin 0 0;
+            transform: rotateZ(-10deg);
+            box-shadow: 
+                0.1vmin 0.1vmin 0.2vmin rgba(0, 0, 0, 0.4),
+                inset 0.05vmin 0.05vmin 0.1vmin rgba(255, 255, 255, 0.2);
+        }
+
+        /* Petit point d'attache du crochet */
+        .tonearm-lift-hook::before {
+            content: '';
+            position: absolute;
+            left: -0.25vmin;
+            top: 0.8vmin;
+            width: 0.3vmin;
+            height: 0.3vmin;
+            background: #555;
+            border-radius: 50%;
+            box-shadow: 0 0.1vmin 0.2vmin rgba(0, 0, 0, 0.5);
         }
 
         /* Tonearm rest stand */
@@ -1694,6 +1726,22 @@
             .zoom-controls {
                 display: flex;
             }
+
+            .speed-selector-container {
+                transform: translateX(-50%) translateX(-32vmin) translateY(70vmin) translateZ(7vmin) rotateZ(348deg);
+            }
+
+            .pitch-control-container {
+                transform: translateX(-50%) translateX(34vmin) translateY(60vmin) translateZ(5vmin);
+            }
+
+            .scene {
+                margin: auto;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+            }
         }
 
         .zoom-btn {
@@ -1720,7 +1768,11 @@
         /* Ajustements pour mobile landscape */
         @media (max-width: 768px) and (orientation: landscape) {
             .speed-selector-container {
-                transform: translateX(-50%) translateX(-25vmin) translateY(40vmin) translateZ(5vmin) rotateZ(348deg);
+                transform: translateX(-50%) translateX(-25vmin) translateY(60vmin) translateZ(5vmin) rotateZ(348deg);
+            }
+
+            .pitch-control-container {
+                transform: translateX(-50%) translateX(34vmin) translateY(53vmin) translateZ(5vmin);
             }
 
             .scene {
@@ -1980,7 +2032,9 @@
                             <path d="M 5,26 C 60,26 80,41 120,38 C 160,35 200,24 240,28 C 255,29 265,29 270,29"
                                 fill="none" stroke="url(#armShine)" stroke-width="4" opacity="0.5" />
                         </svg>
-                        <div class="tonearm-headshell"></div>
+                        <div class="tonearm-headshell">
+                            <div class="tonearm-lift-hook"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2076,11 +2130,7 @@
     <!-- Charger Tone.js depuis CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <script>
-        console.log('🔧 Script chargé, attente DOMContentLoaded...');
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('✅ DOMContentLoaded déclenché');
-            console.log('🔍 Vérification Tone.js:', typeof Tone !== 'undefined' ? 'OK' : 'ERREUR');
-            
             const vinyl = document.querySelector('.vinyl-record');
             const recordContainer = document.querySelector('.record-container');
             const selectorBase = document.querySelector('.selector-base');
@@ -2096,13 +2146,25 @@
             const startingMessage = document.getElementById('starting-message');
             const audioTimeCounter = document.getElementById('audio-time-counter');
             const timeDisplay = document.getElementById('time-display');
+
+            // === DÉMARRAGE TONE.JS AU PREMIER CLIC ===
+            let audioContextStarted = false;
+            const startAudioContext = async () => {
+                if (!audioContextStarted) {
+                    audioContextStarted = true;
+                    try {
+                        await Tone.start();
+                        await audioContext.resume();
+                        console.log('✅ AudioContext démarré après interaction utilisateur');
+                    } catch (e) {
+                        console.warn('⚠️ Erreur démarrage AudioContext:', e);
+                    }
+                }
+            };
             
-            console.log('🔍 Éléments trouvés:', {
-                vinyl: !!vinyl,
-                set33Btn: !!set33Btn,
-                setStopBtn: !!setStopBtn,
-                set45Btn: !!set45Btn
-            });
+            // Attacher au premier clic sur le document
+            document.addEventListener('click', startAudioContext, { once: true });
+            document.addEventListener('touchstart', startAudioContext, { once: true });
 
             // Contrôles de zoom mobile
             const zoomInBtn = document.getElementById('zoom-in');
@@ -2295,8 +2357,6 @@
                     // Mettre à jour l'audio scratcher
                     audioScratcher.updatePosition(newAudioPosition, velocity);
                     
-                    console.log(`🔄 Scratch: ${newRotation.toFixed(2)}° | Audio: ${newAudioPosition.toFixed(3)}s | Velocity: ${velocity.toFixed(2)}`);
-                    
                     if (progress < 1) {
                         requestAnimationFrame(animateScratch);
                     } else {
@@ -2431,7 +2491,7 @@
             let isReversed = false;
 
             // Variables audio
-            const audioElement = new Audio('Hot_Pants.opus');
+            const audioElement = new Audio('VanillaHaters.opus');
             audioElement.loop = false;
             audioElement.preservesPitch = false; // Permettre la variation de pitch
             let currentRPM = 0;
@@ -2551,7 +2611,7 @@
                 updatePosition(newPosition, velocity) {
                     if (!this.isInitialized || !this.isScratching) return;
 
-                    // Limiter la position
+                    // Limiter la position strictement pour éviter les valeurs négatives
                     this.currentPlaybackPosition = Math.max(0, Math.min(this.duration, newPosition));
 
                     // Jouer un grain court à la position actuelle
@@ -2562,7 +2622,8 @@
                                 tonePlayer.stop();
                             }
 
-                            const grainDuration = 0.05; // 50ms
+                            // Grain plus long pour un son plus continu (40ms au lieu de 20ms)
+                            const grainDuration = 0.04;
 
                             // S'assurer que le mode reverse est désactivé pour utiliser les taux négatifs
                             if (tonePlayer.reverse) {
@@ -2570,21 +2631,28 @@
                             }
 
                             // Appliquer un playbackRate basé sur la vitesse (signé pour la direction)
-                            // Gamme étendue: -20.0 à +20.0 pour permettre les "backspins" rapides
-                            // Multiplicateur *2 pour accentuer l'effet de pitch comme demandé
-                            const rate = Math.max(-20.0, Math.min(20.0, velocity * 2));
+                            // Réduire le multiplicateur pour un son plus naturel (2x au lieu de 4x)
+                            let rate = Math.max(-20.0, Math.min(20.0, velocity * 2));
+                            
+                            // Sécurité: éviter les valeurs trop proches de zéro qui causent des erreurs Tone.js
+                            if (Math.abs(rate) < 0.001) {
+                                rate = rate >= 0 ? 0.001 : -0.001;
+                            }
 
                             tonePlayer.playbackRate = rate;
 
-                            // Jouer le grain
-                            tonePlayer.start('+0', this.currentPlaybackPosition, grainDuration);
+                            // CRITICAL: Vérifier que la position est valide avant de démarrer
+                            const safePosition = Math.max(0, Math.min(this.duration - 0.05, this.currentPlaybackPosition));
 
-                            // Programmer l'arrêt du grain avec setTimeout
+                            // Jouer le grain immédiatement sans délai
+                            tonePlayer.start(Tone.now(), safePosition, grainDuration);
+
+                            // Programmer l'arrêt du grain avec un timing qui correspond
                             setTimeout(() => {
                                 if (this.isScratching && tonePlayer && tonePlayer.state === 'started') {
                                     tonePlayer.stop();
                                 }
-                            }, 50);
+                            }, 40); // Correspond à grainDuration
                         } catch (e) {
                             // Silencieux si erreur (player occupé)
                         }
@@ -2744,7 +2812,6 @@
             }
 
             function updateAnimationWithCurrentRotation() {
-                console.log('🔄 updateAnimationWithCurrentRotation appelée');
                 const pitchFactor = parseFloat(pitchSlider.value);
                 let finalDuration;
 
@@ -2753,8 +2820,6 @@
                 } else {
                     finalDuration = 1000;
                 }
-
-                console.log('🔄 Animation params:', { isRunning, finalDuration, isReversed, scratchRotation });
 
                 // Réinitialiser les propriétés d'animation
                 vinyl.style.animation = '';  // Reset complet
@@ -2777,12 +2842,6 @@
                 }
                 
                 vinyl.style.animationPlayState = isRunning ? 'running' : 'paused';
-                
-                console.log('✅ Animation appliquée:', {
-                    playState: vinyl.style.animationPlayState,
-                    duration: vinyl.style.animationDuration,
-                    name: vinyl.style.animationName
-                });
 
                 // Mettre à jour la position du pitch knob visuel
                 const minPitch = 0.5;
@@ -2809,8 +2868,9 @@
                 // Utiliser Tone.js playbackRate au lieu de audioElement
                 if (tonePlayer && tonePlayer.buffer) {
                     // Fix: Always use positive magnitude for rate.
-                    // The direction (reverse) is handled by the directionBtn listener which restarts the player.
-                    tonePlayer.playbackRate = Math.abs(playbackRate);
+                    // Clamp to valid range [0.001, 4.0] to avoid Tone.js errors
+                    const safeRate = Math.max(0.001, Math.min(4.0, Math.abs(playbackRate)));
+                    tonePlayer.playbackRate = safeRate;
                 }
             }
 
@@ -2855,14 +2915,21 @@
                         const targetVelocityDegPerFrame = (360 / getAnimationDuration(currentRPM)) / 60; // ~2.0 en 33RPM
 
                         // Accélération exponentielle vers la vitesse cible (Taux d'approche)
-                        // 0.20 = Récupération RAPIDE comme un moteur à couple élevé (Technics like)
-                        const torqueFactor = 0.20;
+                        // 0.35 = Récupération ULTRA-RAPIDE après scratch (augmenté de 0.20 à 0.35)
+                        const torqueFactor = 0.35;
 
                         scratchVelocity = scratchVelocity + (targetVelocityDegPerFrame - scratchVelocity) * torqueFactor;
 
+                        // Debug: log la convergence
+                        const delta = Math.abs(scratchVelocity - targetVelocityDegPerFrame);
+                        if (delta > 0.15 && delta < 0.5) {
+                            console.log('🔄 Convergence vers vitesse cible:', scratchVelocity.toFixed(2), '→', targetVelocityDegPerFrame.toFixed(2), 'delta:', delta.toFixed(3));
+                        }
+
                         // Si on est assez proche de la vitesse cible, reprendre l'animation CSS
-                        if (Math.abs(scratchVelocity - targetVelocityDegPerFrame) < 0.2) {
+                        if (delta < 0.15) {
                             // STOPPER LE LOOP MANUEL ET REPRENDRE L'ANIMATION CSS
+                            console.log('✅ Vitesse cible atteinte - Restauration animation CSS');
                             scratchVelocity = 0;
                             restoreAnimation();
                             if (scratchAnimationFrame) {
@@ -2911,11 +2978,15 @@
                     // Note: scratchRotation accumule les tours (n'est pas modulo 360)
                     const totalRotationDelta = scratchRotation - anchorRotation;
 
-                    // SECONDS_PER_DEGREE constant
-                    // 360 degrés = BASE_DURATION secondes (ex: 3.0s)
-                    const secondsPerDegree = BASE_DURATION / 360;
+                    // CALCUL CORRECT: Temps audio par degré de rotation
+                    // À 33 RPM: 1 tour = 60/33.33 = 1.8 secondes
+                    // À 45 RPM: 1 tour = 60/45 = 1.333 secondes
+                    // Utiliser la vitesse actuelle du disque (currentRPM) pour calculer
+                    const rpm = currentRPM || RPM_33; // Fallback à 33 si arrêté
+                    const secondsPerRevolution = 60 / rpm; // Temps réel pour 1 tour à la vitesse actuelle
+                    const secondsPerDegree = secondsPerRevolution / 360;
 
-                    // Temps théorique exact
+                    // Temps théorique exact basé sur la rotation
                     const timeShift = totalRotationDelta * secondsPerDegree;
                     let newTime = anchorAudioTime + timeShift;
 
@@ -2941,7 +3012,6 @@
             function animateTonearm(timestamp) {
                 if (!armStartTime) {
                     armStartTime = timestamp;
-                    console.log(`🎬 Animation bras démarrée à timestamp=${timestamp}`);
                 }
                 const elapsedTime = (timestamp - armStartTime) / 1000; // en secondes
 
@@ -2951,13 +3021,13 @@
                     currentArmPosition = currentArmZAngle; // Sauvegarder la position actuelle
 
                     // Appliquez la transformation incluant la rotation Z progressive et X pour hauteur
-                    tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(9vmin) rotateZ(${currentArmZAngle}deg) rotateX(${ARM_HEIGHT_PLAYING}deg)`;
+                    tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(7vmin) rotateZ(${currentArmZAngle}deg) rotateX(${ARM_HEIGHT_PLAYING}deg)`;
 
                     animationFrameId = requestAnimationFrame(animateTonearm);
                 } else {
                     // Fin de la lecture, le bras reste au centre
                     console.log(`✅ Animation bras terminée après ${elapsedTime.toFixed(1)}s`);
-                    tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(9vmin) rotateZ(${ARM_END_Z_ANGLE}deg) rotateX(${ARM_HEIGHT_PLAYING}deg)`;
+                    tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(7vmin) rotateZ(${ARM_END_Z_ANGLE}deg) rotateX(${ARM_HEIGHT_PLAYING}deg)`;
                     cancelAnimationFrame(animationFrameId);
                     animationFrameId = null;
                 }
@@ -2965,16 +3035,20 @@
 
             // Fonction pour déplacer le bras entre les positions
             function moveTonearmToPosition(targetAngle, targetHeight) {
-                console.log('🎯 moveTonearmToPosition:', { targetAngle, targetHeight });
                 armState = targetHeight === ARM_HEIGHT_REST ? 'rest' :
                     targetHeight === ARM_HEIGHT_LIFTED ? 'lifted' : 'playing';
-                const transform = `translate(-50%, -50%) translateZ(9vmin) rotateZ(${targetAngle}deg) rotateX(${targetHeight}deg)`;
+                const transform = `translate(-50%, -50%) translateZ(7vmin) rotateZ(${targetAngle}deg) rotateX(${targetHeight}deg)`;
                 tonearmContainer.style.transform = transform;
-                console.log(`🔧 Bras déplacé: angle=${targetAngle}°, height=${targetHeight}°, state=${armState}, transform=${transform}`);
             }
 
             // Fonction pour démarrer la lecture audio
             function startAudioPlayback() {
+                // IMPORTANT: Arrêter tout player en cours avant de démarrer
+                if (tonePlayer && tonePlayer.state === 'started') {
+                    console.log('🛑 Arrêt du player précédent avant redémarrage');
+                    tonePlayer.stop();
+                }
+
                 // Charger le buffer audio pour le scratch avec Tone.js si pas encore fait
                 if (!audioScratcher.isInitialized) {
                     audioScratcher.loadFromAudioElement().then(() => {
@@ -2995,10 +3069,6 @@
                         const duration = tonePlayer.buffer.duration;
                         currentPos = Math.max(0, Math.min(currentPos, duration - 0.1));
 
-                        if (tonePlayer.state === 'started') {
-                            tonePlayer.stop(); // Arrêter si déjà en lecture
-                        }
-
                         // Redémarrer à partir de la position actuelle (ou du début si position = 0)
                         tonePlayer.start('+0', currentPos);
                         updateAudioPlaybackRate();
@@ -3008,7 +3078,6 @@
             }
 
             function setSpeedAndKnob(rpm, button, skipAnimation = false) {
-                console.log('📞 setSpeedAndKnob appelée:', { rpm, skipAnimation });
                 [set33Btn, setStopBtn, set45Btn].forEach(btn => btn.classList.remove('active'));
 
                 let baseRotation = 0;
@@ -3157,10 +3226,7 @@
                 if (rpm === RPM_33 || rpm === RPM_45) {
                     updateAnimationWithCurrentRotation(); // Restaurer l'animation avec la position actuelle
                     
-                    // Si on vient d'un STOP, redémarrer l'audio (mais pas si skipAnimation)
-                    if (!skipAnimation && tonePlayer && tonePlayer.state !== 'started') {
-                        startAudioPlayback();
-                    }
+                    // L'audio sera démarré dans la séquence d'animation du bras (pas ici pour éviter le double)
                 } else {
                     updateAnimation(); // Simple mise à jour pour STOP
                 }
@@ -3188,20 +3254,15 @@
             });
 
             // Événements des boutons UI (panneau de contrôle)
-            console.log('🔧 Attachement des event listeners...');
             set33Btn.addEventListener('click', () => {
-                console.log('🎵 Clic sur 33 RPM');
                 setSpeedAndKnob(RPM_33, set33Btn);
             });
             setStopBtn.addEventListener('click', () => {
-                console.log('⏹️ Clic sur STOP');
                 setSpeedAndKnob(0, setStopBtn);
             });
             set45Btn.addEventListener('click', () => {
-                console.log('🎵 Clic sur 45 RPM');
                 setSpeedAndKnob(RPM_45, set45Btn);
             });
-            console.log('✅ Event listeners attachés');
 
             pitchSlider.addEventListener('input', () => {
                 if (isRunning) {
@@ -3353,8 +3414,20 @@
                     // Arrêter le scratch audio granulaire Tone.js
                     audioScratcher.stopScratch();
 
-                    // La physique de "retour à la vitesse" est gérée par la boucle applyScratch
-                    // On ne fait rien d'autre ici
+                    // Si le disque tourne, restaurer immédiatement l'animation et l'audio
+                    if (isRunning) {
+                        // Initialiser la vitesse de scratch vers la vitesse cible pour accélérer la reprise
+                        const targetVelocityDegPerFrame = (360 / getAnimationDuration(currentRPM)) / 60;
+                        // Si scratchVelocity est négatif (scratch arrière), le forcer vers une valeur positive
+                        scratchVelocity = Math.abs(scratchVelocity) > targetVelocityDegPerFrame * 2 
+                            ? scratchVelocity * 0.3  // Ralentir progressivement si vitesse élevée
+                            : targetVelocityDegPerFrame * 0.5; // Sinon démarrer à 50% de la cible
+                    }
+
+                    // S'assurer que la boucle applyScratch continue pour la récupération
+                    if (!scratchAnimationFrame && isRunning) {
+                        scratchAnimationFrame = requestAnimationFrame(applyScratch);
+                    }
                 }
             });
 
@@ -3442,7 +3515,20 @@
                     isScratching = false;
                     vinyl.classList.remove('scratching');
                     audioScratcher.stopScratch();
-                    // La physique est gérée par applyScratch
+                    
+                    // Si le disque tourne, initialiser la vitesse pour accélérer la reprise
+                    if (isRunning) {
+                        const targetVelocityDegPerFrame = (360 / getAnimationDuration(currentRPM)) / 60;
+                        // Si scratchVelocity est négatif (scratch arrière), le forcer vers une valeur positive
+                        scratchVelocity = Math.abs(scratchVelocity) > targetVelocityDegPerFrame * 2 
+                            ? scratchVelocity * 0.3  // Ralentir progressivement si vitesse élevée
+                            : targetVelocityDegPerFrame * 0.5; // Sinon démarrer à 50% de la cible
+                    }
+                    
+                    // S'assurer que la boucle applyScratch continue pour la récupération
+                    if (!scratchAnimationFrame && isRunning) {
+                        scratchAnimationFrame = requestAnimationFrame(applyScratch);
+                    }
                 }
             });
 
@@ -3452,6 +3538,7 @@
                 vinyl.style.transition = '';
 
                 vinyl.style.animationName = isReversed ? 'spin-reverse' : 'spin';
+                vinyl.style.animationIterationCount = 'infinite'; // Garantir que l'animation continue
 
                 const currentCyclePosition = (scratchRotation % 360 + 360) % 360;
                 const cycleCompleteRatio = currentCyclePosition / 360;
@@ -3468,6 +3555,13 @@
 
                 if (tonePlayer && audioScratcher.isInitialized) {
                     let currentPos = audioScratcher.getPosition();
+                    
+                    // CRITICAL: Double validation pour éviter les valeurs négatives
+                    if (currentPos < 0 || isNaN(currentPos)) {
+                        console.warn('⚠️ Position audio invalide détectée:', currentPos, '- Réinitialisation à 0');
+                        currentPos = 0;
+                    }
+                    
                     // Fix: Ensure start time is never negative to avoid Tone.js RangeError
                     currentPos = Math.max(0, currentPos);
 
@@ -3483,12 +3577,30 @@
 
                     // Essential: Restore the reverse state which might have been cleared by scratching
                     tonePlayer.reverse = isReversed;
+                    
+                    // CRITICAL FIX: Reset playbackRate to positive value before starting
+                    // The playbackRate might be negative from scratching, which causes Tone.js errors
+                    const pitchFactor = parseFloat(pitchSlider.value);
+                    const speedRatio = currentRPM / RPM_33;
+                    const safeRate = Math.max(0.001, Math.min(4.0, Math.abs(speedRatio * pitchFactor)));
+                    tonePlayer.playbackRate = safeRate;
 
                     // Use try-catch to handle any timing edge cases
                     try {
-                        // Use a larger delay to ensure clean scheduling and avoid negative timing
-                        const startTime = Tone.now() + 0.05; // 50ms delay
-                        tonePlayer.start(startTime, currentPos);
+                        // Additional validation before starting
+                        if (currentPos < 0) {
+                            console.error('❌ Position négative détectée avant start():', currentPos);
+                            currentPos = 0;
+                        }
+                        
+                        // Use a minimal delay for faster restart (10ms instead of 50ms)
+                        const startTime = Tone.now() + 0.01;
+                        
+                        // Final safety check
+                        const safePos = Math.max(0, currentPos);
+                        console.log('🎵 Démarrage audio à position:', safePos, 'avec playbackRate:', safeRate);
+                        
+                        tonePlayer.start(startTime, safePos);
                     } catch (e) {
                         console.warn('⚠️ Erreur démarrage audio, tentative de récupération:', e);
                         // Fallback: try starting from position 0 with a longer delay
