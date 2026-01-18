@@ -1311,29 +1311,30 @@
         /* Crochet de levée sur la droite de la tête de lecture */
         .tonearm-lift-hook {
             position: absolute;
-            right: -0.8vmin;
-            top: -0.6vmin;
-            width: 1.2vmin;
-            height: 1.2vmin;
+            right: -1.2vmin;
+            top: -0.8vmin;
+            width: 2vmin;
+            height: 2vmin;
             background: transparent;
-            border: 0.2vmin solid #666;
+            border: 0.3vmin solid #666;
             border-bottom: none;
             border-left: none;
-            border-radius: 0 0.8vmin 0 0;
+            border-radius: 0 1.2vmin 0 0;
             transform: rotateZ(-10deg);
             box-shadow: 
                 0.1vmin 0.1vmin 0.2vmin rgba(0, 0, 0, 0.4),
                 inset 0.05vmin 0.05vmin 0.1vmin rgba(255, 255, 255, 0.2);
+            cursor: pointer;
         }
 
         /* Petit point d'attache du crochet */
         .tonearm-lift-hook::before {
             content: '';
             position: absolute;
-            left: -0.25vmin;
-            top: 0.8vmin;
-            width: 0.3vmin;
-            height: 0.3vmin;
+            left: -0.35vmin;
+            top: 1.4vmin;
+            width: 0.5vmin;
+            height: 0.5vmin;
             background: #555;
             border-radius: 50%;
             box-shadow: 0 0.1vmin 0.2vmin rgba(0, 0, 0, 0.5);
