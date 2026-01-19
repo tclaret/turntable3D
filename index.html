@@ -1073,7 +1073,8 @@
             /* Z=7 (above turntable-base at 2vmin and record at 6.5vmin) */
             /* Initial position: ARM_REST_Z_ANGLE (-90deg) and ARM_HEIGHT_REST (-5deg) */
             transform-style: preserve-3d;
-            transition: transform 0.6s ease-in-out;
+            transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                        filter 0.8s ease-out;
 
             width: 7vmin;
             height: 7vmin;
@@ -1266,78 +1267,159 @@
             position: absolute;
             right: -1vmin;
             top: 50%;
-            transform: translateY(-50%) rotateZ(5deg);
-            /* Moins d'angle */
+            transform: translateY(-50%) rotateZ(20deg) translateZ(0.5vmin);
+            /* Rotation 20° clockwise + profondeur 3D */
             transform-origin: left center;
-            width: 4vmin;
-            height: 2vmin;
-            background: linear-gradient(to right, #222, #444);
-            /* Noir/Gris foncé */
-            border-radius: 0.2vmin;
-            /* Plus carré */
-            border: 0.1vmin solid #000;
+            width: 5vmin;
+            height: 2.5vmin;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
+            /* Noir mat style Ortofon */
+            border-radius: 0.3vmin;
+            border: 0.15vmin solid #0a0a0a;
             box-shadow:
-                0 0.3vmin 0.8vmin rgba(0, 0, 0, 0.6),
-                inset 0.2vmin 0.2vmin 0.4vmin rgba(255, 255, 255, 0.2);
+                0 0.5vmin 1.2vmin rgba(0, 0, 0, 0.8),
+                0 0.2vmin 0.5vmin rgba(0, 0, 0, 0.6),
+                inset 0.1vmin 0.1vmin 0.3vmin rgba(255, 255, 255, 0.1),
+                inset -0.1vmin -0.1vmin 0.3vmin rgba(0, 0, 0, 0.5);
             transform-style: preserve-3d;
+            cursor: grab;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
-        /* Aiguille de la tête de lecture */
+        .tonearm-headshell:hover {
+            transform: translateY(-50%) rotateZ(20deg) translateZ(1vmin);
+            box-shadow:
+                0 0.8vmin 1.8vmin rgba(0, 0, 0, 0.9),
+                0 0.4vmin 0.8vmin rgba(0, 0, 0, 0.7),
+                inset 0.1vmin 0.1vmin 0.3vmin rgba(255, 255, 255, 0.15);
+            cursor: grab;
+        }
+
+        .tonearm-headshell:active {
+            cursor: grabbing;
+        }
+
+        /* Aiguille de la tête de lecture - pointe diamant */
         .tonearm-headshell::before {
             content: '';
             position: absolute;
-            right: 0.5vmin;
-            bottom: -0.5vmin;
-            width: 0.3vmin;
-            height: 0.8vmin;
-            background: #fff;
-            border-radius: 0.1vmin;
-            box-shadow: 0 0.1vmin 0.2vmin rgba(0, 0, 0, 0.5);
+            right: 0.8vmin;
+            bottom: -0.8vmin;
+            width: 0.4vmin;
+            height: 1vmin;
+            background: linear-gradient(180deg, #ddd 0%, #fff 50%, #eee 100%);
+            border-radius: 0.2vmin;
+            box-shadow: 
+                0 0.2vmin 0.4vmin rgba(0, 0, 0, 0.6),
+                0 0 0.3vmin rgba(255, 255, 255, 0.8);
+            transform: translateZ(0.2vmin);
         }
 
-        /* Cartouche sur la tête */
+        /* Cartouche style Ortofon - rouge et blanc sans texte */
         .tonearm-headshell::after {
             content: '';
-            position: absolute;
-            right: 0.5vmin;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 2vmin;
-            height: 1.5vmin;
-            background: #111;
-            border: 0.1vmin solid #333;
+            display: none; /* Cartouche supprimée */
         }
 
-        /* Crochet de levée sur la droite de la tête de lecture */
+        /* Crochet - petit finger lift qui sort du côté droit de la tête */
         .tonearm-lift-hook {
             position: absolute;
-            right: -1.2vmin;
-            top: -0.8vmin;
-            width: 2vmin;
-            height: 2vmin;
-            background: transparent;
-            border: 0.3vmin solid #666;
-            border-bottom: none;
-            border-left: none;
-            border-radius: 0 1.2vmin 0 0;
-            transform: rotateZ(-10deg);
+            right: -2.5vmin;
+            top: 50%;
+            transform: translateY(-50%) translateZ(0.5vmin);
+            width: 2.5vmin;
+            height: 0.8vmin;
+            background: linear-gradient(90deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
+            border: 0.12vmin solid #1a252f;
+            border-radius: 0.4vmin;
             box-shadow: 
-                0.1vmin 0.1vmin 0.2vmin rgba(0, 0, 0, 0.4),
-                inset 0.05vmin 0.05vmin 0.1vmin rgba(255, 255, 255, 0.2);
-            cursor: pointer;
+                0.2vmin 0.2vmin 0.6vmin rgba(0, 0, 0, 0.7),
+                inset 0.08vmin 0.08vmin 0.15vmin rgba(255, 255, 255, 0.15),
+                inset -0.08vmin -0.08vmin 0.15vmin rgba(0, 0, 0, 0.5);
+            cursor: grab;
+            transition: all 0.3s ease;
+            pointer-events: auto;
         }
 
-        /* Petit point d'attache du crochet */
+        .tonearm-lift-hook:hover {
+            background: linear-gradient(90deg, #3498db 0%, #5dade2 50%, #3498db 100%);
+            transform: translateY(-50%) translateX(0.2vmin) translateZ(1vmin);
+            box-shadow: 
+                0.4vmin 0.4vmin 1vmin rgba(0, 0, 0, 0.9),
+                0 0 1.2vmin rgba(52, 152, 219, 0.7),
+                inset 0.1vmin 0.1vmin 0.2vmin rgba(255, 255, 255, 0.3);
+        }
+
+        .tonearm-lift-hook:active {
+            cursor: grabbing;
+            transform: translateY(-50%) translateZ(0.3vmin);
+        }
+
+        /* Poignée au bout du finger lift */
         .tonearm-lift-hook::before {
             content: '';
             position: absolute;
-            left: -0.35vmin;
-            top: 1.4vmin;
-            width: 0.5vmin;
-            height: 0.5vmin;
-            background: #555;
+            right: -0.4vmin;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0.9vmin;
+            height: 0.9vmin;
+            background: radial-gradient(circle at 35% 35%, #5dade2, #3498db, #2c3e50);
             border-radius: 50%;
-            box-shadow: 0 0.1vmin 0.2vmin rgba(0, 0, 0, 0.5);
+            border: 0.12vmin solid #1a252f;
+            box-shadow: 
+                0.15vmin 0.15vmin 0.4vmin rgba(0, 0, 0, 0.7),
+                inset 0.08vmin 0.08vmin 0.15vmin rgba(255, 255, 255, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .tonearm-lift-hook:hover::before {
+            background: radial-gradient(circle at 35% 35%, #5dade2, #3498db);
+            box-shadow: 
+                0.3vmin 0.3vmin 0.7vmin rgba(0, 0, 0, 0.8),
+                0 0 1vmin rgba(52, 152, 219, 0.8),
+                inset 0.15vmin 0.15vmin 0.3vmin rgba(255, 255, 255, 0.5);
+        }
+
+        /* Point d'attache chromé sur l'extension */
+        .tonearm-lift-hook::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 0.6vmin;
+            height: 0.6vmin;
+            background: radial-gradient(circle at 35% 35%, #fff, #ccc, #888);
+            border-radius: 50%;
+            border: 0.08vmin solid #555;
+            box-shadow: 
+                0 0.15vmin 0.3vmin rgba(0, 0, 0, 0.6),
+                inset 0.08vmin 0.08vmin 0.15vmin rgba(255, 255, 255, 0.8);
+        }
+
+        /* Ajouter des vis chromées sur la tête de lecture */
+        .tonearm-headshell-screw {
+            position: absolute;
+            width: 0.4vmin;
+            height: 0.4vmin;
+            background: radial-gradient(circle at 30% 30%, #fff, #ddd, #999);
+            border-radius: 50%;
+            border: 0.05vmin solid #666;
+            box-shadow: 
+                0 0.1vmin 0.2vmin rgba(0, 0, 0, 0.5),
+                inset 0.05vmin 0.05vmin 0.1vmin rgba(255, 255, 255, 0.8);
+            transform: translateZ(0.4vmin);
+        }
+
+        .tonearm-headshell-screw:nth-child(1) {
+            left: 0.5vmin;
+            top: 0.4vmin;
+        }
+
+        .tonearm-headshell-screw:nth-child(2) {
+            left: 0.5vmin;
+            bottom: 0.4vmin;
         }
 
         /* Tonearm rest stand */
@@ -2023,17 +2105,30 @@
                                 </linearGradient>
                             </defs>
                             <!-- Extension vers l'arrière jusqu'au pivot -->
-                            <path d="M -50,30 L 0,30 L 20,30 C 60,30 80,45 120,42 C 160,39 200,28 240,32 C 260,34 270,34 275,34 
-                                 L 275,26 C 270,26 260,26 240,24 C 200,20 160,31 120,34 C 80,37 60,22 20,22 L 0,22 L -50,22 Z"
+                            <!-- Bras principal avec courbure S inspirée du design réel -->
+                            <path d="M -50,30 L 0,30 
+                                     C 30,30 50,28 80,32 
+                                     C 110,36 130,42 160,40 
+                                     C 190,38 210,30 240,28 
+                                     C 255,27 265,27 275,27
+                                     L 275,33
+                                     C 265,33 255,33 240,34
+                                     C 210,36 190,44 160,46
+                                     C 130,48 110,42 80,38
+                                     C 50,34 30,36 0,36
+                                     L -50,36 Z"
                                 fill="url(#armGradient)" stroke="#666" stroke-width="0.5" />
-                            <!-- Contrepoids à l'arrière -->
-                            <circle cx="-40" cy="28" r="8" fill="#555" stroke="#333" stroke-width="0.5" />
-                            <circle cx="-40" cy="28" r="6" fill="url(#armGradient)" />
-                            <!-- Shine effect -->
-                            <path d="M 5,26 C 60,26 80,41 120,38 C 160,35 200,24 240,28 C 255,29 265,29 270,29"
-                                fill="none" stroke="url(#armShine)" stroke-width="4" opacity="0.5" />
+                            <!-- Contrepoids à l'arrière avec détails -->
+                            <ellipse cx="-40" cy="33" rx="10" ry="8" fill="#444" stroke="#222" stroke-width="0.5" />
+                            <ellipse cx="-40" cy="33" rx="7" ry="6" fill="url(#armGradient)" />
+                            <ellipse cx="-40" cy="31" rx="3" ry="2" fill="#999" opacity="0.6" />
+                            <!-- Shine effect avec courbure adaptée -->
+                            <path d="M 5,29 C 35,29 55,30 85,34 C 115,38 135,43 165,41 C 195,39 215,31 245,29"
+                                fill="none" stroke="url(#armShine)" stroke-width="3" opacity="0.5" />
                         </svg>
                         <div class="tonearm-headshell">
+                            <div class="tonearm-headshell-screw"></div>
+                            <div class="tonearm-headshell-screw"></div>
                             <div class="tonearm-lift-hook"></div>
                         </div>
                     </div>
@@ -2723,9 +2818,9 @@
             const ARM_TOTAL_PLAY_DURATION_SECONDS = 720; // 12 minutes pour parcourir du bord à l'étiquette centrale
 
             // Hauteurs Z (profondeur 3D) - maintenant en angles de rotation X
-            const ARM_HEIGHT_REST = -5;      // Sur le support (légèrement incliné vers le bas)
-            const ARM_HEIGHT_LIFTED = 15;    // Levé pour déplacer (angle positif)
-            const ARM_HEIGHT_PLAYING = 5;    // Sur le disque en lecture (léger angle)
+            const ARM_HEIGHT_REST = -8;      // Sur le support (incliné vers le bas pour effet repos)
+            const ARM_HEIGHT_LIFTED = 28;    // Levé haut pour effet dramatique (plus visible)
+            const ARM_HEIGHT_PLAYING = 3;    // Sur le disque en lecture (léger angle)
 
             // Éléments des marqueurs de position
             const armStartMarker = document.getElementById('arm-start-marker');
@@ -3038,8 +3133,22 @@
             function moveTonearmToPosition(targetAngle, targetHeight) {
                 armState = targetHeight === ARM_HEIGHT_REST ? 'rest' :
                     targetHeight === ARM_HEIGHT_LIFTED ? 'lifted' : 'playing';
-                const transform = `translate(-50%, -50%) translateZ(7vmin) rotateZ(${targetAngle}deg) rotateX(${targetHeight}deg)`;
+                
+                // Calculer la position Z dynamique pour accentuer l'effet de levée
+                let zPosition = 7;
+                if (targetHeight === ARM_HEIGHT_LIFTED) {
+                    zPosition = 10; // Monter plus haut en Z quand le bras est levé
+                }
+                
+                const transform = `translate(-50%, -50%) translateZ(${zPosition}vmin) rotateZ(${targetAngle}deg) rotateX(${targetHeight}deg)`;
                 tonearmContainer.style.transform = transform;
+                
+                // Ajouter une ombre portée dynamique selon la hauteur
+                if (targetHeight === ARM_HEIGHT_LIFTED) {
+                    tonearmContainer.style.filter = 'drop-shadow(0 1vmin 2vmin rgba(0, 0, 0, 0.5))';
+                } else {
+                    tonearmContainer.style.filter = 'drop-shadow(0 0.3vmin 0.8vmin rgba(0, 0, 0, 0.6))';
+                }
             }
 
             // Fonction pour démarrer la lecture audio
@@ -3541,10 +3650,24 @@
                 vinyl.style.animationName = isReversed ? 'spin-reverse' : 'spin';
                 vinyl.style.animationIterationCount = 'infinite'; // Garantir que l'animation continue
 
+                // CRITICAL FIX: Calculer la durée correcte basée sur currentRPM et pitch
+                const pitchFactor = parseFloat(pitchSlider.value);
+                let animationDuration;
+                
+                if (isRunning && currentRPM > 0) {
+                    // Calculer la durée basée sur la vitesse actuelle
+                    animationDuration = (currentSpeedDuration / pitchFactor);
+                } else {
+                    // Fallback sur la durée calculée ou la valeur par défaut
+                    animationDuration = parseFloat(getComputedStyle(vinyl).animationDuration) || 3.0;
+                }
+                
+                // Appliquer la durée d'animation correcte
+                vinyl.style.animationDuration = `${animationDuration}s`;
+                vinyl.style.animationTimingFunction = 'linear';
+
                 const currentCyclePosition = (scratchRotation % 360 + 360) % 360;
                 const cycleCompleteRatio = currentCyclePosition / 360;
-
-                const animationDuration = parseFloat(getComputedStyle(vinyl).animationDuration) || 0;
 
                 if (isReversed) {
                     vinyl.style.animationDelay = `-${(1 - cycleCompleteRatio) * animationDuration}s`;
