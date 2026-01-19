@@ -125,6 +125,7 @@
             position: relative;
             margin: 120px auto 20px;
             transform-style: preserve-3d;
+            transform-origin: center center;
         }
 
         .scene-inner {
@@ -1321,12 +1322,12 @@
             display: none; /* Cartouche supprimée */
         }
 
-        /* Crochet - petit finger lift qui sort du côté droit de la tête */
+        /* Crochet - petit finger lift qui sort vers X+ (droite) */
         .tonearm-lift-hook {
             position: absolute;
             right: -2.5vmin;
             top: 50%;
-            transform: translateY(-50%) translateZ(0.5vmin);
+            transform: translate(0, -50%) translateZ(0.5vmin);
             width: 2.5vmin;
             height: 0.8vmin;
             background: linear-gradient(90deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
@@ -1343,7 +1344,7 @@
 
         .tonearm-lift-hook:hover {
             background: linear-gradient(90deg, #3498db 0%, #5dade2 50%, #3498db 100%);
-            transform: translateY(-50%) translateX(0.2vmin) translateZ(1vmin);
+            transform: translate(0.2vmin, -50%) translateZ(1vmin);
             box-shadow: 
                 0.4vmin 0.4vmin 1vmin rgba(0, 0, 0, 0.9),
                 0 0 1.2vmin rgba(52, 152, 219, 0.7),
@@ -1352,7 +1353,7 @@
 
         .tonearm-lift-hook:active {
             cursor: grabbing;
-            transform: translateY(-50%) translateZ(0.3vmin);
+            transform: translate(0, -50%) translateZ(0.3vmin);
         }
 
         /* Poignée au bout du finger lift */
@@ -2275,6 +2276,7 @@
                 zoomInBtn.addEventListener('click', () => {
                     currentScale = Math.min(currentScale + scaleStep, maxScale);
                     scene.style.transform = `scale(${currentScale})`;
+                    scene.style.transformOrigin = 'center center';
                 });
             }
 
@@ -2282,6 +2284,7 @@
                 zoomOutBtn.addEventListener('click', () => {
                     currentScale = Math.max(currentScale - scaleStep, minScale);
                     scene.style.transform = `scale(${currentScale})`;
+                    scene.style.transformOrigin = 'center center';
                 });
             }
 
@@ -2289,6 +2292,7 @@
                 zoomResetBtn.addEventListener('click', () => {
                     currentScale = 1.0;
                     scene.style.transform = `scale(${currentScale})`;
+                    scene.style.transformOrigin = 'center center';
                     rotationX = 30;
                     rotationZ = 0;
                     sceneInner.style.transform = `rotateX(${rotationX}deg) rotateZ(${rotationZ}deg)`;
