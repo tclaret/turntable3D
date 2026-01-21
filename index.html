@@ -1074,8 +1074,8 @@
             /* Z=7 (above turntable-base at 2vmin and record at 6.5vmin) */
             /* Initial position: ARM_REST_Z_ANGLE (-90deg) and ARM_HEIGHT_REST (-5deg) */
             transform-style: preserve-3d;
-            transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
-                        filter 0.8s ease-out;
+            transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                filter 0.8s ease-out;
 
             width: 7vmin;
             height: 7vmin;
@@ -1088,9 +1088,10 @@
                 inset 0.2vmin 0.2vmin 0.5vmin rgba(255, 255, 255, 0.2);
 
             transform-origin: center center;
-            pointer-events: auto; /* Allow interaction with child elements */
+            pointer-events: auto;
+            /* Allow interaction with child elements */
         }
-        
+
         /* When dragging the arm, use faster transition */
         .tonearm-container.dragging {
             transition: transform 0.1s linear, filter 0.1s linear;
@@ -1315,7 +1316,7 @@
             height: 1vmin;
             background: linear-gradient(180deg, #ddd 0%, #fff 50%, #eee 100%);
             border-radius: 0.2vmin;
-            box-shadow: 
+            box-shadow:
                 0 0.2vmin 0.4vmin rgba(0, 0, 0, 0.6),
                 0 0 0.3vmin rgba(255, 255, 255, 0.8);
             transform: translateZ(0.2vmin);
@@ -1324,94 +1325,84 @@
         /* Cartouche style Ortofon - rouge et blanc sans texte */
         .tonearm-headshell::after {
             content: '';
-            display: none; /* Cartouche supprimée */
+            display: none;
+            /* Cartouche supprimée */
         }
 
         /* Crochet - petit finger lift qui sort vers X+ (droite) */
+        /* Crochet - Modified to be curved finger lift */
         .tonearm-lift-hook {
             position: absolute;
-            right: -2.5vmin;
-            top: 50%;
-            transform: translate(0, -50%) translateZ(0.5vmin);
-            width: 2.5vmin;
-            height: 0.8vmin;
-            background: linear-gradient(90deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
-            border: 0.12vmin solid #1a252f;
-            border-radius: 0.4vmin;
-            box-shadow: 
-                0.2vmin 0.2vmin 0.6vmin rgba(0, 0, 0, 0.7),
-                inset 0.08vmin 0.08vmin 0.15vmin rgba(255, 255, 255, 0.15),
-                inset -0.08vmin -0.08vmin 0.15vmin rgba(0, 0, 0, 0.5);
+            right: -3.2vmin;
+            /* Moved relative to headshell */
+            top: 25%;
+            transform: translateY(-50%) translateZ(0.5vmin) rotateZ(-10deg);
+            width: 2.8vmin;
+            height: 1.8vmin;
+            background: transparent;
+            /* Curved wire effect using borders */
+            border-bottom: 0.35vmin solid #2c3e50;
+            border-right: 0.35vmin solid #2c3e50;
+            border-radius: 0 0 80% 0;
+            /* Bottom-right curve */
+
             cursor: grab;
             transition: all 0.3s ease;
             pointer-events: auto;
+            box-shadow: none;
+            filter: drop-shadow(0.15vmin 0.15vmin 0.2vmin rgba(0, 0, 0, 0.6));
         }
 
         .tonearm-lift-hook:hover {
-            background: linear-gradient(90deg, #3498db 0%, #5dade2 50%, #3498db 100%);
-            transform: translate(0.2vmin, -50%) translateZ(1vmin);
-            box-shadow: 
-                0.4vmin 0.4vmin 1vmin rgba(0, 0, 0, 0.9),
-                0 0 1.2vmin rgba(52, 152, 219, 0.7),
-                inset 0.1vmin 0.1vmin 0.2vmin rgba(255, 255, 255, 0.3);
+            border-color: #3498db;
+            filter: drop-shadow(0 0 0.5vmin rgba(52, 152, 219, 0.7));
+            transform: translateY(-50%) translateZ(1vmin) rotateZ(-10deg) scale(1.05);
             cursor: grab !important;
         }
 
         .tonearm-lift-hook:active {
             cursor: grabbing !important;
-            transform: translate(0, -50%) translateZ(0.3vmin);
+            transform: translateY(-50%) translateZ(0.3vmin) rotateZ(-10deg);
         }
-        
+
         /* Highlight when grabbing */
         .tonearm-container.dragging .tonearm-lift-hook {
-            background: linear-gradient(90deg, #e74c3c 0%, #ff6b6b 50%, #e74c3c 100%);
-            box-shadow: 
-                0.4vmin 0.4vmin 1vmin rgba(0, 0, 0, 0.9),
-                0 0 1.5vmin rgba(231, 76, 60, 0.9),
-                inset 0.1vmin 0.1vmin 0.2vmin rgba(255, 255, 255, 0.3);
+            border-color: #e74c3c;
+            filter: drop-shadow(0 0 0.8vmin rgba(231, 76, 60, 0.8));
         }
 
         /* Poignée au bout du finger lift */
         .tonearm-lift-hook::before {
             content: '';
             position: absolute;
-            right: -0.4vmin;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 0.9vmin;
-            height: 0.9vmin;
-            background: radial-gradient(circle at 35% 35%, #5dade2, #3498db, #2c3e50);
-            border-radius: 50%;
-            border: 0.12vmin solid #1a252f;
-            box-shadow: 
-                0.15vmin 0.15vmin 0.4vmin rgba(0, 0, 0, 0.7),
-                inset 0.08vmin 0.08vmin 0.15vmin rgba(255, 255, 255, 0.4);
+            right: -0.5vmin;
+            /* Aligned with top-right of curve */
+            top: -0.5vmin;
+            width: 1.1vmin;
+            height: 0.8vmin;
+            background: linear-gradient(90deg, #2c3e50, #1a1a1a);
+            border-radius: 0.2vmin;
+            /* Flat tab style handle */
+            transform: rotate(15deg);
+            box-shadow: 0.1vmin 0.1vmin 0.3vmin rgba(0, 0, 0, 0.5);
             transition: all 0.3s ease;
         }
 
         .tonearm-lift-hook:hover::before {
-            background: radial-gradient(circle at 35% 35%, #5dade2, #3498db);
-            box-shadow: 
-                0.3vmin 0.3vmin 0.7vmin rgba(0, 0, 0, 0.8),
-                0 0 1vmin rgba(52, 152, 219, 0.8),
-                inset 0.15vmin 0.15vmin 0.3vmin rgba(255, 255, 255, 0.5);
+            background: linear-gradient(90deg, #3498db, #2980b9);
         }
 
-        /* Point d'attache chromé sur l'extension */
+        /* Point d'attache sur la headshell (début du fil) */
         .tonearm-lift-hook::after {
             content: '';
             position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 0.6vmin;
-            height: 0.6vmin;
-            background: radial-gradient(circle at 35% 35%, #fff, #ccc, #888);
+            left: -0.2vmin;
+            bottom: -0.35vmin;
+            /* Match border width */
+            width: 0.5vmin;
+            height: 0.5vmin;
+            background: #2c3e50;
             border-radius: 50%;
-            border: 0.08vmin solid #555;
-            box-shadow: 
-                0 0.15vmin 0.3vmin rgba(0, 0, 0, 0.6),
-                inset 0.08vmin 0.08vmin 0.15vmin rgba(255, 255, 255, 0.8);
         }
 
         /* Ajouter des vis chromées sur la tête de lecture */
@@ -1422,7 +1413,7 @@
             background: radial-gradient(circle at 30% 30%, #fff, #ddd, #999);
             border-radius: 50%;
             border: 0.05vmin solid #666;
-            box-shadow: 
+            box-shadow:
                 0 0.1vmin 0.2vmin rgba(0, 0, 0, 0.5),
                 inset 0.05vmin 0.05vmin 0.1vmin rgba(255, 255, 255, 0.8);
             transform: translateZ(0.4vmin);
@@ -1669,10 +1660,21 @@
             white-space: nowrap;
         }
 
-        .angle-marker-0 { transform: translate(-50%, -50%) rotate(0deg); }
-        .angle-marker-90 { transform: translate(-50%, -50%) rotate(90deg); }
-        .angle-marker-180 { transform: translate(-50%, -50%) rotate(180deg); }
-        .angle-marker-270 { transform: translate(-50%, -50%) rotate(270deg); }
+        .angle-marker-0 {
+            transform: translate(-50%, -50%) rotate(0deg);
+        }
+
+        .angle-marker-90 {
+            transform: translate(-50%, -50%) rotate(90deg);
+        }
+
+        .angle-marker-180 {
+            transform: translate(-50%, -50%) rotate(180deg);
+        }
+
+        .angle-marker-270 {
+            transform: translate(-50%, -50%) rotate(270deg);
+        }
 
         /* Message de démarrage */
         .starting-message {
@@ -2085,7 +2087,8 @@
                 <div class="speed-selector-container">
                     <div class="speed-points-container">
                         <div class="speed-point speed-point-33" data-speed="33" data-label="33" title="33 RPM"></div>
-                        <div class="speed-point speed-point-stop active" data-speed="stop" data-label="STOP" title="STOP"></div>
+                        <div class="speed-point speed-point-stop active" data-speed="stop" data-label="STOP"
+                            title="STOP"></div>
                         <div class="speed-point speed-point-45" data-speed="45" data-label="45" title="45 RPM"></div>
                     </div>
                     <div class="selector-base">
@@ -2132,8 +2135,7 @@
                                      C 210,36 190,44 160,46
                                      C 130,48 110,42 80,38
                                      C 50,34 30,36 0,36
-                                     L -50,36 Z"
-                                fill="url(#armGradient)" stroke="#666" stroke-width="0.5" />
+                                     L -50,36 Z" fill="url(#armGradient)" stroke="#666" stroke-width="0.5" />
                             <!-- Contrepoids à l'arrière avec détails -->
                             <ellipse cx="-40" cy="33" rx="10" ry="8" fill="#444" stroke="#222" stroke-width="0.5" />
                             <ellipse cx="-40" cy="33" rx="7" ry="6" fill="url(#armGradient)" />
@@ -2194,7 +2196,9 @@
                 <input type="checkbox" id="debug-scratch-overlay" style="cursor: pointer;">
                 <span>Afficher overlay scratch</span>
             </label>
-            <button id="test-scratch-btn" style="width: 100%; padding: 10px; background: #c0392b; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 10px;">🎵 Test Scratch (one two three)</button>
+            <button id="test-scratch-btn"
+                style="width: 100%; padding: 10px; background: #c0392b; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 10px;">🎵
+                Test Scratch (one two three)</button>
             <hr style="border-color: #555; margin: 8px 0;">
             <div><strong>Axes:</strong> Rouge=X, Vert=Y, Bleu=Z</div>
             <div><strong>Boîtes:</strong> Jaune=Base, Cyan=Disque, Magenta=Bras</div>
@@ -2273,7 +2277,7 @@
                     }
                 }
             };
-            
+
             // Attacher au premier clic sur le document
             document.addEventListener('click', startAudioContext, { once: true });
             document.addEventListener('touchstart', startAudioContext, { once: true });
@@ -2287,27 +2291,40 @@
             const minScale = 0.5;
             const maxScale = 2.0;
 
+            function updateZoom() {
+                // Mobile detection using width check (matches CSS media query)
+                const isMobile = window.innerWidth <= 768;
+
+                if (isMobile) {
+                    // Mobile requires centering via translate
+                    scene.style.transform = `translate(-50%, -50%) scale(${currentScale})`;
+                } else {
+                    scene.style.transform = `scale(${currentScale})`;
+                }
+                scene.style.transformOrigin = 'center center';
+            }
+
+            // Also listen to resize to adjust transform if crossing breakpoint
+            window.addEventListener('resize', updateZoom);
+
             if (zoomInBtn) {
                 zoomInBtn.addEventListener('click', () => {
                     currentScale = Math.min(currentScale + scaleStep, maxScale);
-                    scene.style.transform = `scale(${currentScale})`;
-                    scene.style.transformOrigin = 'center center';
+                    updateZoom();
                 });
             }
 
             if (zoomOutBtn) {
                 zoomOutBtn.addEventListener('click', () => {
                     currentScale = Math.max(currentScale - scaleStep, minScale);
-                    scene.style.transform = `scale(${currentScale})`;
-                    scene.style.transformOrigin = 'center center';
+                    updateZoom();
                 });
             }
 
             if (zoomResetBtn) {
                 zoomResetBtn.addEventListener('click', () => {
                     currentScale = 1.0;
-                    scene.style.transform = `scale(${currentScale})`;
-                    scene.style.transformOrigin = 'center center';
+                    updateZoom();
                     rotationX = 30;
                     rotationZ = 0;
                     sceneInner.style.transform = `rotateX(${rotationX}deg) rotateZ(${rotationZ}deg)`;
@@ -2346,19 +2363,19 @@
             // Fonction pour mettre à jour le compteur de temps audio
             function updateAudioTimeCounter() {
                 if (!audioTimeCounter || !timeDisplay) return;
-                
+
                 const currentTime = audioScratcher.getPosition();
                 const duration = audioScratcher.duration || 0;
-                
+
                 const formatTime = (seconds) => {
                     const mins = Math.floor(seconds / 60);
                     const secs = Math.floor(seconds % 60);
                     const ms = Math.floor((seconds % 1) * 1000);
                     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
                 };
-                
+
                 timeDisplay.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
-                
+
                 if (scene.classList.contains('debug')) {
                     requestAnimationFrame(updateAudioTimeCounter);
                 }
@@ -2367,7 +2384,7 @@
             // Fonction de test scratch - joue jusqu'à "one two three" puis fait un demi-tour arrière
             async function testScratch() {
                 console.log('🎵 Test Scratch démarré');
-                
+
                 // Activer le mode debug si ce n'est pas déjà fait
                 if (!scene.classList.contains('debug')) {
                     scene.classList.add('debug');
@@ -2376,102 +2393,102 @@
                     }
                     updateAudioTimeCounter();
                 }
-                
+
                 // Démarrer la lecture à 33 RPM
                 if (!isRunning) {
                     setSpeedAndKnob(RPM_33, set33Btn);
                 }
-                
+
                 // Attendre que l'audio soit prêt
                 if (!audioScratcher.isInitialized) {
                     await audioScratcher.initialize();
                 }
-                
+
                 // Attendre d'arriver à environ 3.5 secondes (approximation du "one two three")
                 const targetTime = 3.5; // secondes
                 console.log(`⏳ Attente du "one two three" (${targetTime}s)...`);
-                
+
                 // Attendre que la position audio atteigne le temps cible
                 await new Promise((resolve) => {
                     const checkTime = setInterval(() => {
                         const currentTime = audioScratcher.getPosition();
                         console.log(`⏱️ Position actuelle: ${currentTime.toFixed(3)}s`);
-                        
+
                         if (currentTime >= targetTime) {
                             clearInterval(checkTime);
                             resolve();
                         }
                     }, 100);
                 });
-                
+
                 console.log('✅ Position "one two three" atteinte!');
-                
+
                 // Capturer la rotation actuelle du disque
                 const computedTransform = getComputedStyle(vinyl).transform;
                 let currentRotation = 0;
-                
+
                 if (computedTransform && computedTransform !== 'none') {
                     const matrix = new DOMMatrix(computedTransform);
                     currentRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
                 }
-                
+
                 console.log(`🔄 Rotation actuelle: ${currentRotation.toFixed(2)}°`);
-                
+
                 // Simuler le début du scratch
                 isScratching = true;
                 vinyl.classList.add('scratching');
                 const currentAudioPosition = audioScratcher.getPosition();
                 audioScratcher.startScratch(currentAudioPosition);
-                
+
                 // Stopper l'audio
                 if (tonePlayer && tonePlayer.state === 'started') {
                     tonePlayer.stop();
                 }
-                
+
                 // Supprimer l'animation CSS
                 vinyl.style.animation = 'none';
                 vinyl.style.transform = `rotate(${currentRotation}deg)`;
-                
+
                 scratchRotation = currentRotation;
                 anchorRotation = currentRotation;
                 anchorAudioTime = currentAudioPosition;
-                
+
                 console.log('🎯 Scratch initialisé - début du demi-tour arrière');
-                
+
                 // Animer un demi-tour en arrière (180°)
                 const startRotation = currentRotation;
                 const targetRotation = currentRotation - 180; // Demi-tour arrière
                 const scratchDuration = 2000; // 2 secondes pour le scratch
                 const startTime = Date.now();
                 const startAudioTime = currentAudioPosition;
-                
+
                 // Durée d'une rotation complète à 33 RPM
                 const rotationDuration33 = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--speed-33-duration')) * 1000;
-                
+
                 function animateScratch() {
                     const elapsed = Date.now() - startTime;
                     const progress = Math.min(elapsed / scratchDuration, 1);
-                    
+
                     // Interpolation avec easing (ease-out pour un mouvement plus naturel)
                     const easedProgress = 1 - Math.pow(1 - progress, 3);
-                    
+
                     const newRotation = startRotation + (targetRotation - startRotation) * easedProgress;
                     const rotationDelta = newRotation - scratchRotation;
-                    
+
                     scratchRotation = newRotation;
                     vinyl.style.transform = `rotate(${newRotation}deg)`;
-                    
+
                     // Calculer la nouvelle position audio basée sur la rotation
                     const totalRotationChange = newRotation - anchorRotation;
                     const audioPositionChange = (totalRotationChange / 360) * (rotationDuration33 / 1000);
                     const newAudioPosition = anchorAudioTime + audioPositionChange;
-                    
+
                     // Calculer la vitesse pour l'effet audio
                     const velocity = rotationDelta / 10; // Approximation de la vitesse
-                    
+
                     // Mettre à jour l'audio scratcher
                     audioScratcher.updatePosition(newAudioPosition, velocity);
-                    
+
                     if (progress < 1) {
                         requestAnimationFrame(animateScratch);
                     } else {
@@ -2480,15 +2497,15 @@
                         audioScratcher.stopScratch();
                         isScratching = false;
                         vinyl.classList.remove('scratching');
-                        
+
                         // Reprendre la lecture normale
                         restoreAnimation();
                     }
                 }
-                
+
                 animateScratch();
             }
-            
+
             // Bouton de test scratch
             if (testScratchBtn) {
                 testScratchBtn.addEventListener('click', () => {
@@ -2752,7 +2769,7 @@
                             // Appliquer un playbackRate basé sur la vitesse (signé pour la direction)
                             // Réduire le multiplicateur pour un son plus naturel (2x au lieu de 4x)
                             let rate = Math.max(-20.0, Math.min(20.0, velocity * 2));
-                            
+
                             // Sécurité: éviter les valeurs trop proches de zéro qui causent des erreurs Tone.js
                             if (Math.abs(rate) < 0.001) {
                                 rate = rate >= 0 ? 0.001 : -0.001;
@@ -2842,7 +2859,7 @@
 
             // Hauteurs Z (profondeur 3D) - maintenant en angles de rotation X
             const ARM_HEIGHT_REST = -8;      // Sur le support (incliné vers le bas pour effet repos)
-            const ARM_HEIGHT_LIFTED = 8;     // Levé légèrement (5-10° pour manipulation)
+            const ARM_HEIGHT_LIFTED = 12;    // Levé plus haut pour un mouvement clair (rotation pivot)
             const ARM_HEIGHT_PLAYING = 3;    // Sur le disque en lecture (léger angle)
 
             // === VARIABLES POUR LE CONTRÔLE INTERACTIF DU BRAS ===
@@ -2951,23 +2968,23 @@
                 // Réinitialiser les propriétés d'animation
                 vinyl.style.animation = '';  // Reset complet
                 vinyl.style.transform = '';  // Reset transform pour laisser l'animation CSS gérer
-                
+
                 // Définir le nom de l'animation et la durée
                 vinyl.style.animationName = isReversed ? 'spin-reverse' : 'spin';
                 vinyl.style.animationDuration = `${finalDuration}s`;
                 vinyl.style.animationIterationCount = 'infinite'; // Assurer la répétition infinie
                 vinyl.style.animationTimingFunction = 'linear'; // Assurer la vitesse constante
-                
+
                 // Calculer le delay d'animation pour commencer à la position actuelle
                 const currentCyclePosition = (scratchRotation % 360 + 360) % 360;
                 const cycleCompleteRatio = currentCyclePosition / 360;
-                
+
                 if (isReversed) {
                     vinyl.style.animationDelay = `-${(1 - cycleCompleteRatio) * finalDuration}s`;
                 } else {
                     vinyl.style.animationDelay = `-${cycleCompleteRatio * finalDuration}s`;
                 }
-                
+
                 vinyl.style.animationPlayState = isRunning ? 'running' : 'paused';
 
                 // Mettre à jour la position du pitch knob visuel
@@ -3164,16 +3181,14 @@
             function moveTonearmToPosition(targetAngle, targetHeight) {
                 armState = targetHeight === ARM_HEIGHT_REST ? 'rest' :
                     targetHeight === ARM_HEIGHT_LIFTED ? 'lifted' : 'playing';
-                
-                // Calculer la position Z dynamique pour accentuer l'effet de levée
-                let zPosition = 7;
-                if (targetHeight === ARM_HEIGHT_LIFTED) {
-                    zPosition = 7.5; // Légère élévation quand le bras est levé
-                }
-                
+
+                // Position Z fixe pour le pivot (le socle ne bouge pas verticalement)
+                const zPosition = 7;
+
+                // Le mouvement vertical se fait uniquement par rotation X
                 const transform = `translate(-50%, -50%) translateZ(${zPosition}vmin) rotateZ(${targetAngle}deg) rotateX(${targetHeight}deg)`;
                 tonearmContainer.style.transform = transform;
-                
+
                 // Ajouter une ombre portée dynamique selon la hauteur
                 if (targetHeight === ARM_HEIGHT_LIFTED) {
                     tonearmContainer.style.filter = 'drop-shadow(0 1vmin 2vmin rgba(0, 0, 0, 0.5))';
@@ -3310,7 +3325,7 @@
                     // Désactiver l'animation CSS et appliquer la rotation actuelle
                     vinyl.style.animation = 'none';
                     vinyl.style.transform = `translate(-50%, -50%) rotateZ(${scratchRotation}deg)`;
-                    
+
                     // Calculer la vélocité actuelle basée sur la vitesse de rotation
                     const pitchFactor = parseFloat(pitchSlider.value);
                     const rotationSpeed = (360 / getAnimationDuration(currentRPM || RPM_33)) / 60; // degrés par frame
@@ -3351,7 +3366,7 @@
 
                 // Mettre à jour les points visuels
                 speedPoints.forEach(point => point.classList.remove('active'));
-                
+
                 if (rpm === RPM_33) {
                     document.querySelector('.speed-point-33').classList.add('active');
                 } else if (rpm === RPM_45) {
@@ -3366,7 +3381,7 @@
                 // Appeler la bonne fonction selon le cas
                 if (rpm === RPM_33 || rpm === RPM_45) {
                     updateAnimationWithCurrentRotation(); // Restaurer l'animation avec la position actuelle
-                    
+
                     // L'audio sera démarré dans la séquence d'animation du bras (pas ici pour éviter le double)
                 } else {
                     updateAnimation(); // Simple mise à jour pour STOP
@@ -3378,7 +3393,7 @@
                 point.addEventListener('click', () => {
                     const speed = point.dataset.speed;
                     let rpm, btn;
-                    
+
                     if (speed === '33') {
                         rpm = RPM_33;
                         btn = set33Btn;
@@ -3389,7 +3404,7 @@
                         rpm = 0;
                         btn = setStopBtn;
                     }
-                    
+
                     setSpeedAndKnob(rpm, btn);
                 });
             });
@@ -3423,12 +3438,12 @@
                 // Capturer la position de rotation actuelle du disque avant de changer
                 const computedTransform = getComputedStyle(vinyl).transform;
                 let currentRotation = 0;
-                
+
                 if (computedTransform && computedTransform !== 'none') {
                     const matrix = new DOMMatrix(computedTransform);
                     currentRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
                 }
-                
+
                 // Mettre à jour scratchRotation pour conserver la position actuelle
                 scratchRotation = currentRotation;
 
@@ -3560,7 +3575,7 @@
                         // Initialiser la vitesse de scratch vers la vitesse cible pour accélérer la reprise
                         const targetVelocityDegPerFrame = (360 / getAnimationDuration(currentRPM)) / 60;
                         // Si scratchVelocity est négatif (scratch arrière), le forcer vers une valeur positive
-                        scratchVelocity = Math.abs(scratchVelocity) > targetVelocityDegPerFrame * 2 
+                        scratchVelocity = Math.abs(scratchVelocity) > targetVelocityDegPerFrame * 2
                             ? scratchVelocity * 0.3  // Ralentir progressivement si vitesse élevée
                             : targetVelocityDegPerFrame * 0.5; // Sinon démarrer à 50% de la cible
                     }
@@ -3656,16 +3671,16 @@
                     isScratching = false;
                     vinyl.classList.remove('scratching');
                     audioScratcher.stopScratch();
-                    
+
                     // Si le disque tourne, initialiser la vitesse pour accélérer la reprise
                     if (isRunning) {
                         const targetVelocityDegPerFrame = (360 / getAnimationDuration(currentRPM)) / 60;
                         // Si scratchVelocity est négatif (scratch arrière), le forcer vers une valeur positive
-                        scratchVelocity = Math.abs(scratchVelocity) > targetVelocityDegPerFrame * 2 
+                        scratchVelocity = Math.abs(scratchVelocity) > targetVelocityDegPerFrame * 2
                             ? scratchVelocity * 0.3  // Ralentir progressivement si vitesse élevée
                             : targetVelocityDegPerFrame * 0.5; // Sinon démarrer à 50% de la cible
                     }
-                    
+
                     // S'assurer que la boucle applyScratch continue pour la récupération
                     if (!scratchAnimationFrame && isRunning) {
                         scratchAnimationFrame = requestAnimationFrame(applyScratch);
@@ -3684,7 +3699,7 @@
                 // CRITICAL FIX: Calculer la durée correcte basée sur currentRPM et pitch
                 const pitchFactor = parseFloat(pitchSlider.value);
                 let animationDuration;
-                
+
                 if (isRunning && currentRPM > 0) {
                     // Calculer la durée basée sur la vitesse actuelle
                     animationDuration = (currentSpeedDuration / pitchFactor);
@@ -3692,7 +3707,7 @@
                     // Fallback sur la durée calculée ou la valeur par défaut
                     animationDuration = parseFloat(getComputedStyle(vinyl).animationDuration) || 3.0;
                 }
-                
+
                 // Appliquer la durée d'animation correcte
                 vinyl.style.animationDuration = `${animationDuration}s`;
                 vinyl.style.animationTimingFunction = 'linear';
@@ -3710,13 +3725,13 @@
 
                 if (tonePlayer && audioScratcher.isInitialized) {
                     let currentPos = audioScratcher.getPosition();
-                    
+
                     // CRITICAL: Double validation pour éviter les valeurs négatives
                     if (currentPos < 0 || isNaN(currentPos)) {
                         console.warn('⚠️ Position audio invalide détectée:', currentPos, '- Réinitialisation à 0');
                         currentPos = 0;
                     }
-                    
+
                     // Fix: Ensure start time is never negative to avoid Tone.js RangeError
                     currentPos = Math.max(0, currentPos);
 
@@ -3732,7 +3747,7 @@
 
                     // Essential: Restore the reverse state which might have been cleared by scratching
                     tonePlayer.reverse = isReversed;
-                    
+
                     // CRITICAL FIX: Reset playbackRate to positive value before starting
                     // The playbackRate might be negative from scratching, which causes Tone.js errors
                     const pitchFactor = parseFloat(pitchSlider.value);
@@ -3747,14 +3762,14 @@
                             console.error('❌ Position négative détectée avant start():', currentPos);
                             currentPos = 0;
                         }
-                        
+
                         // Use a minimal delay for faster restart (10ms instead of 50ms)
                         const startTime = Tone.now() + 0.01;
-                        
+
                         // Final safety check
                         const safePos = Math.max(0, currentPos);
                         console.log('🎵 Démarrage audio à position:', safePos, 'avec playbackRate:', safeRate);
-                        
+
                         tonePlayer.start(startTime, safePos);
                     } catch (e) {
                         console.warn('⚠️ Erreur démarrage audio, tentative de récupération:', e);
@@ -3774,153 +3789,170 @@
 
             // === CONTRÔLE INTERACTIF DU BRAS (DRAG & DROP) ===
             const tonearmLiftHook = document.querySelector('.tonearm-lift-hook');
-            
+
+            // Variable pour stocker l'offset d'angle au début du drag
+            let armDragAngleOffset = 0;
+
             // Fonction pour convertir les coordonnées de souris en angle du bras
             function mouseToArmAngle(clientX, clientY) {
-                const recordRect = recordContainer.getBoundingClientRect();
-                
-                // Centre du disque (pivot du bras)
-                const recordCenterX = recordRect.left + recordRect.width / 2;
-                const recordCenterY = recordRect.top + recordRect.height / 2;
-                
-                // Calculer l'angle depuis le centre du disque vers le pointeur
-                const deltaX = clientX - recordCenterX;
-                const deltaY = clientY - recordCenterY;
+                // Utiliser le conteneur du bras comme pivot
+                const armRect = tonearmContainer.getBoundingClientRect();
+
+                // Centre du pivot du bras
+                const pivotX = armRect.left + armRect.width / 2;
+                const pivotY = armRect.top + armRect.height / 2;
+
+                // Calculer l'angle depuis le pivot du bras vers le pointeur
+                const deltaX = clientX - pivotX;
+                const deltaY = clientY - pivotY;
+
+                // atan2 renvoie l'angle en radians par rapport à l'axe X positif (droite)
                 let angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-                
-                // Convertir pour correspondre au système de rotation du bras
-                // rotateZ: 0° = droite, 90° = bas, 180° = gauche, -90° = haut
-                angle = angle + 90;
-                
-                // Contraindre l'angle dans la plage physique du bras
-                // De la position de repos (-90°) jusqu'au centre (145°)
-                angle = Math.max(-95, Math.min(145, angle));
-                
+
                 return angle;
             }
-            
+
             // Fonction pour vérifier si le bras est au-dessus du disque
             function isArmOverVinyl(angle) {
                 // Le bras est sur le disque si l'angle est entre ARM_START_Z_ANGLE (-80) et un peu au-delà
                 // On considère qu'il est sur le disque de -75° à 145°
                 return angle >= -75 && angle <= 145;
             }
-            
+
             // Fonction pour calculer la distance radiale depuis le centre du disque
             function getRadialDistanceFromCenter(clientX, clientY) {
                 const recordRect = recordContainer.getBoundingClientRect();
                 const recordCenterX = recordRect.left + recordRect.width / 2;
                 const recordCenterY = recordRect.top + recordRect.height / 2;
-                
+
                 const deltaX = clientX - recordCenterX;
                 const deltaY = clientY - recordCenterY;
                 const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-                
+
                 // Normaliser par rapport au rayon du disque
                 const recordRadius = recordRect.width / 2;
                 return distance / recordRadius;
             }
-            
+
             // Événement: Attraper le crochet du bras
             if (tonearmLiftHook) {
                 tonearmLiftHook.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    
+
                     isDraggingArm = true;
-                    armDragStartX = e.clientX;
-                    armDragStartY = e.clientY;
-                    
+
+                    // Calculer l'angle actuel de la souris par rapport au pivot
+                    const mouseAngle = mouseToArmAngle(e.clientX, e.clientY);
+
+                    // Calculer l'offset pour maintenir la position relative
+                    armDragAngleOffset = armCurrentZAngle - mouseAngle;
+
                     // Annuler l'animation automatique si elle est en cours
                     if (animationFrameId) {
                         cancelAnimationFrame(animationFrameId);
                         animationFrameId = null;
                     }
-                    
+
                     // Lever le bras
                     isArmLifted = true;
                     armCurrentHeight = ARM_HEIGHT_LIFTED;
-                    
+
                     // Ajouter la classe pour transition rapide
                     tonearmContainer.classList.add('dragging');
                     moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
-                    
+
                     console.log('🎵 Bras attrapé par le crochet');
                 });
-                
+
                 tonearmLiftHook.addEventListener('touchstart', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    
+
                     const touch = e.touches[0];
                     isDraggingArm = true;
-                    armDragStartX = touch.clientX;
-                    armDragStartY = touch.clientY;
-                    
+
+                    const mouseAngle = mouseToArmAngle(touch.clientX, touch.clientY);
+                    armDragAngleOffset = armCurrentZAngle - mouseAngle;
+
                     if (animationFrameId) {
                         cancelAnimationFrame(animationFrameId);
                         animationFrameId = null;
                     }
-                    
+
                     isArmLifted = true;
                     armCurrentHeight = ARM_HEIGHT_LIFTED;
-                    
+
                     tonearmContainer.classList.add('dragging');
                     moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
-                    
+
                     console.log('🎵 Bras attrapé par le crochet (tactile)');
                 });
             }
-            
+
             // Événement: Déplacer le bras
             document.addEventListener('mousemove', (e) => {
                 if (!isDraggingArm) return;
-                
+
                 // Convertir la position de la souris en angle du bras
-                const newAngle = mouseToArmAngle(e.clientX, e.clientY);
+                const mouseAngle = mouseToArmAngle(e.clientX, e.clientY);
+
+                // Appliquer l'offset
+                let newAngle = mouseAngle + armDragAngleOffset;
+
+                // Contraindre l'angle (plage plus large pour permettre le drag hors zone)
+                newAngle = Math.max(-100, Math.min(150, newAngle));
+
                 armCurrentZAngle = newAngle;
-                
+
                 // Mettre à jour la position du bras
                 moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
-                
+
                 e.preventDefault();
             });
-            
+
             document.addEventListener('touchmove', (e) => {
                 if (!isDraggingArm) return;
-                
+
                 const touch = e.touches[0];
-                const newAngle = mouseToArmAngle(touch.clientX, touch.clientY);
+                const mouseAngle = mouseToArmAngle(touch.clientX, touch.clientY);
+
+                // Appliquer l'offset
+                let newAngle = mouseAngle + armDragAngleOffset;
+
+                // Contraindre l'angle (plage plus large pour permettre le drag hors zone)
+                newAngle = Math.max(-100, Math.min(150, newAngle));
+
                 armCurrentZAngle = newAngle;
-                
+
                 moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
-                
+
                 e.preventDefault();
             });
-            
+
             // Événement: Relâcher le bras
             document.addEventListener('mouseup', (e) => {
                 if (!isDraggingArm) return;
-                
+
                 isDraggingArm = false;
-                
+
                 // Retirer la classe de drag rapide
                 tonearmContainer.classList.remove('dragging');
-                
+
                 // Vérifier si le bras est au-dessus du disque
                 if (isArmOverVinyl(armCurrentZAngle)) {
                     console.log('🎵 Bras posé sur le disque à l\'angle:', armCurrentZAngle.toFixed(1), '°');
-                    
+
                     // Abaisser le bras sur le disque
                     isArmLifted = false;
                     armCurrentHeight = ARM_HEIGHT_PLAYING;
                     moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
-                    
+
                     // Démarrer la lecture à 33 RPM si pas déjà en cours
                     if (!isRunning || currentRPM !== RPM_33) {
                         console.log('🎵 Démarrage automatique de la lecture à 33 RPM');
                         setSpeedAndKnob(RPM_33, set33Btn);
-                        
+
                         // Afficher un message
                         startingMessage.textContent = 'Starting at 33 RPM';
                         startingMessage.style.display = 'block';
@@ -3928,18 +3960,18 @@
                             startingMessage.style.display = 'none';
                         }, 2000);
                     }
-                    
+
                     // Démarrer l'animation du bras du point actuel vers le centre
                     // Calculer la durée proportionnelle basée sur la position
                     const totalAngleRange = ARM_END_Z_ANGLE - ARM_START_Z_ANGLE;
                     const remainingAngleRange = ARM_END_Z_ANGLE - armCurrentZAngle;
                     const progressRatio = remainingAngleRange / totalAngleRange;
-                    
+
                     // Si le bras est déjà proche du centre, ne pas démarrer l'animation
                     if (progressRatio > 0.05) {
                         armStartTime = 0;
                         currentArmPosition = armCurrentZAngle;
-                        
+
                         // Fonction d'animation personnalisée depuis la position actuelle
                         function animateTonearmFromCurrent(timestamp) {
                             if (!armStartTime) {
@@ -3947,14 +3979,14 @@
                             }
                             const elapsedTime = (timestamp - armStartTime) / 1000;
                             const remainingDuration = ARM_TOTAL_PLAY_DURATION_SECONDS * progressRatio;
-                            
+
                             if (elapsedTime < remainingDuration) {
                                 const progress = elapsedTime / remainingDuration;
                                 const currentAngle = armCurrentZAngle + (ARM_END_Z_ANGLE - armCurrentZAngle) * progress;
-                                
+
                                 moveTonearmToPosition(currentAngle, ARM_HEIGHT_PLAYING);
                                 armCurrentZAngle = currentAngle;
-                                
+
                                 animationFrameId = requestAnimationFrame(animateTonearmFromCurrent);
                             } else {
                                 console.log('✅ Animation bras terminée au centre');
@@ -3962,7 +3994,7 @@
                                 armCurrentZAngle = ARM_END_Z_ANGLE;
                             }
                         }
-                        
+
                         animationFrameId = requestAnimationFrame(animateTonearmFromCurrent);
                     }
                 } else {
@@ -3974,55 +4006,55 @@
                     moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
                 }
             });
-            
+
             document.addEventListener('touchend', (e) => {
                 if (!isDraggingArm) return;
-                
+
                 isDraggingArm = false;
-                
+
                 // Retirer la classe de drag rapide
                 tonearmContainer.classList.remove('dragging');
-                
+
                 if (isArmOverVinyl(armCurrentZAngle)) {
                     console.log('🎵 Bras posé sur le disque à l\'angle:', armCurrentZAngle.toFixed(1), '° (tactile)');
-                    
+
                     isArmLifted = false;
                     armCurrentHeight = ARM_HEIGHT_PLAYING;
                     moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
-                    
+
                     if (!isRunning || currentRPM !== RPM_33) {
                         console.log('🎵 Démarrage automatique de la lecture à 33 RPM');
                         setSpeedAndKnob(RPM_33, set33Btn);
-                        
+
                         startingMessage.textContent = 'Starting at 33 RPM';
                         startingMessage.style.display = 'block';
                         setTimeout(() => {
                             startingMessage.style.display = 'none';
                         }, 2000);
                     }
-                    
+
                     const totalAngleRange = ARM_END_Z_ANGLE - ARM_START_Z_ANGLE;
                     const remainingAngleRange = ARM_END_Z_ANGLE - armCurrentZAngle;
                     const progressRatio = remainingAngleRange / totalAngleRange;
-                    
+
                     if (progressRatio > 0.05) {
                         armStartTime = 0;
                         currentArmPosition = armCurrentZAngle;
-                        
+
                         function animateTonearmFromCurrentTouch(timestamp) {
                             if (!armStartTime) {
                                 armStartTime = timestamp;
                             }
                             const elapsedTime = (timestamp - armStartTime) / 1000;
                             const remainingDuration = ARM_TOTAL_PLAY_DURATION_SECONDS * progressRatio;
-                            
+
                             if (elapsedTime < remainingDuration) {
                                 const progress = elapsedTime / remainingDuration;
                                 const currentAngle = armCurrentZAngle + (ARM_END_Z_ANGLE - armCurrentZAngle) * progress;
-                                
+
                                 moveTonearmToPosition(currentAngle, ARM_HEIGHT_PLAYING);
                                 armCurrentZAngle = currentAngle;
-                                
+
                                 animationFrameId = requestAnimationFrame(animateTonearmFromCurrentTouch);
                             } else {
                                 console.log('✅ Animation bras terminée au centre (tactile)');
@@ -4030,7 +4062,7 @@
                                 armCurrentZAngle = ARM_END_Z_ANGLE;
                             }
                         }
-                        
+
                         animationFrameId = requestAnimationFrame(animateTonearmFromCurrentTouch);
                     }
                 } else {
@@ -4045,7 +4077,14 @@
             // Initialisation à l'arrêt
             setSpeedAndKnob(0, setStopBtn, true); // skipAnimation = true pour l'initialisation
             updateAnimation(); // Initialiser la position du pitch knob
-            moveTonearmToPosition(ARM_REST_Z_ANGLE, ARM_HEIGHT_REST); // Position initiale sur le repos
+
+            console.log('🎵 Initialisation position bras...');
+            if (tonearmContainer) {
+                console.log('✅ tonearmContainer trouvé');
+                moveTonearmToPosition(ARM_REST_Z_ANGLE, ARM_HEIGHT_REST); // Position initiale sur le repos
+            } else {
+                console.error('❌ tonearmContainer INTROUVABLE');
+            }
 
             // NOUVEAU: Précharger l'audio pour permettre le scratch dès le début
             console.log('🎵 Préchargement de l\'audio pour le scratch...');
