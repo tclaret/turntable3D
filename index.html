@@ -1088,7 +1088,12 @@
                 inset 0.2vmin 0.2vmin 0.5vmin rgba(255, 255, 255, 0.2);
 
             transform-origin: center center;
-            pointer-events: none;
+            pointer-events: auto; /* Allow interaction with child elements */
+        }
+        
+        /* When dragging the arm, use faster transition */
+        .tonearm-container.dragging {
+            transition: transform 0.1s linear, filter 0.1s linear;
         }
 
         /* Gimbal ring detail */
@@ -1349,11 +1354,21 @@
                 0.4vmin 0.4vmin 1vmin rgba(0, 0, 0, 0.9),
                 0 0 1.2vmin rgba(52, 152, 219, 0.7),
                 inset 0.1vmin 0.1vmin 0.2vmin rgba(255, 255, 255, 0.3);
+            cursor: grab !important;
         }
 
         .tonearm-lift-hook:active {
-            cursor: grabbing;
+            cursor: grabbing !important;
             transform: translate(0, -50%) translateZ(0.3vmin);
+        }
+        
+        /* Highlight when grabbing */
+        .tonearm-container.dragging .tonearm-lift-hook {
+            background: linear-gradient(90deg, #e74c3c 0%, #ff6b6b 50%, #e74c3c 100%);
+            box-shadow: 
+                0.4vmin 0.4vmin 1vmin rgba(0, 0, 0, 0.9),
+                0 0 1.5vmin rgba(231, 76, 60, 0.9),
+                inset 0.1vmin 0.1vmin 0.2vmin rgba(255, 255, 255, 0.3);
         }
 
         /* Poignée au bout du finger lift */
@@ -2494,6 +2509,10 @@
                 if (e.target.closest('.vinyl-record')) {
                     return;
                 }
+                // Ne pas activer le drag 3D si on drag le bras
+                if (isDraggingArm) {
+                    return;
+                }
                 isDragging = true;
                 startX = e.clientX;
                 startY = e.clientY;
@@ -2501,8 +2520,8 @@
             });
 
             document.addEventListener('mousemove', (e) => {
-                // Ne pas faire de rotation 3D pendant le scratch
-                if (isScratching) return;
+                // Ne pas faire de rotation 3D pendant le scratch ou le drag du bras
+                if (isScratching || isDraggingArm) return;
                 if (!isDragging) return;
                 const deltaX = e.clientX - startX;
                 const deltaY = e.clientY - startY;
@@ -2521,11 +2540,11 @@
 
             document.addEventListener('mouseup', () => {
                 // Arrêter le drag 3D (mais pas le scratch, géré séparément)
-                if (!isScratching) {
+                if (!isScratching && !isDraggingArm) {
                     isDragging = false;
                     scene.style.cursor = 'grab';
                 } else {
-                    // Si on scratche, forcer l'arrêt du drag 3D
+                    // Si on scratche ou drag le bras, forcer l'arrêt du drag 3D
                     isDragging = false;
                 }
             });
@@ -2823,8 +2842,16 @@
 
             // Hauteurs Z (profondeur 3D) - maintenant en angles de rotation X
             const ARM_HEIGHT_REST = -8;      // Sur le support (incliné vers le bas pour effet repos)
-            const ARM_HEIGHT_LIFTED = 28;    // Levé haut pour effet dramatique (plus visible)
+            const ARM_HEIGHT_LIFTED = 8;     // Levé légèrement (5-10° pour manipulation)
             const ARM_HEIGHT_PLAYING = 3;    // Sur le disque en lecture (léger angle)
+
+            // === VARIABLES POUR LE CONTRÔLE INTERACTIF DU BRAS ===
+            let isDraggingArm = false;
+            let armDragStartX = 0;
+            let armDragStartY = 0;
+            let armCurrentZAngle = ARM_REST_Z_ANGLE; // Commence au repos
+            let armCurrentHeight = ARM_HEIGHT_REST;  // Commence au repos
+            let isArmLifted = false;
 
             // Éléments des marqueurs de position
             const armStartMarker = document.getElementById('arm-start-marker');
@@ -3141,7 +3168,7 @@
                 // Calculer la position Z dynamique pour accentuer l'effet de levée
                 let zPosition = 7;
                 if (targetHeight === ARM_HEIGHT_LIFTED) {
-                    zPosition = 10; // Monter plus haut en Z quand le bras est levé
+                    zPosition = 7.5; // Légère élévation quand le bras est levé
                 }
                 
                 const transform = `translate(-50%, -50%) translateZ(${zPosition}vmin) rotateZ(${targetAngle}deg) rotateX(${targetHeight}deg)`;
@@ -3744,6 +3771,276 @@
 
             // Mettre à jour les marqueurs lors du redimensionnement
             window.addEventListener('resize', updateArmMarkers);
+
+            // === CONTRÔLE INTERACTIF DU BRAS (DRAG & DROP) ===
+            const tonearmLiftHook = document.querySelector('.tonearm-lift-hook');
+            
+            // Fonction pour convertir les coordonnées de souris en angle du bras
+            function mouseToArmAngle(clientX, clientY) {
+                const recordRect = recordContainer.getBoundingClientRect();
+                
+                // Centre du disque (pivot du bras)
+                const recordCenterX = recordRect.left + recordRect.width / 2;
+                const recordCenterY = recordRect.top + recordRect.height / 2;
+                
+                // Calculer l'angle depuis le centre du disque vers le pointeur
+                const deltaX = clientX - recordCenterX;
+                const deltaY = clientY - recordCenterY;
+                let angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+                
+                // Convertir pour correspondre au système de rotation du bras
+                // rotateZ: 0° = droite, 90° = bas, 180° = gauche, -90° = haut
+                angle = angle + 90;
+                
+                // Contraindre l'angle dans la plage physique du bras
+                // De la position de repos (-90°) jusqu'au centre (145°)
+                angle = Math.max(-95, Math.min(145, angle));
+                
+                return angle;
+            }
+            
+            // Fonction pour vérifier si le bras est au-dessus du disque
+            function isArmOverVinyl(angle) {
+                // Le bras est sur le disque si l'angle est entre ARM_START_Z_ANGLE (-80) et un peu au-delà
+                // On considère qu'il est sur le disque de -75° à 145°
+                return angle >= -75 && angle <= 145;
+            }
+            
+            // Fonction pour calculer la distance radiale depuis le centre du disque
+            function getRadialDistanceFromCenter(clientX, clientY) {
+                const recordRect = recordContainer.getBoundingClientRect();
+                const recordCenterX = recordRect.left + recordRect.width / 2;
+                const recordCenterY = recordRect.top + recordRect.height / 2;
+                
+                const deltaX = clientX - recordCenterX;
+                const deltaY = clientY - recordCenterY;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                
+                // Normaliser par rapport au rayon du disque
+                const recordRadius = recordRect.width / 2;
+                return distance / recordRadius;
+            }
+            
+            // Événement: Attraper le crochet du bras
+            if (tonearmLiftHook) {
+                tonearmLiftHook.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    isDraggingArm = true;
+                    armDragStartX = e.clientX;
+                    armDragStartY = e.clientY;
+                    
+                    // Annuler l'animation automatique si elle est en cours
+                    if (animationFrameId) {
+                        cancelAnimationFrame(animationFrameId);
+                        animationFrameId = null;
+                    }
+                    
+                    // Lever le bras
+                    isArmLifted = true;
+                    armCurrentHeight = ARM_HEIGHT_LIFTED;
+                    
+                    // Ajouter la classe pour transition rapide
+                    tonearmContainer.classList.add('dragging');
+                    moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
+                    
+                    console.log('🎵 Bras attrapé par le crochet');
+                });
+                
+                tonearmLiftHook.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const touch = e.touches[0];
+                    isDraggingArm = true;
+                    armDragStartX = touch.clientX;
+                    armDragStartY = touch.clientY;
+                    
+                    if (animationFrameId) {
+                        cancelAnimationFrame(animationFrameId);
+                        animationFrameId = null;
+                    }
+                    
+                    isArmLifted = true;
+                    armCurrentHeight = ARM_HEIGHT_LIFTED;
+                    
+                    tonearmContainer.classList.add('dragging');
+                    moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
+                    
+                    console.log('🎵 Bras attrapé par le crochet (tactile)');
+                });
+            }
+            
+            // Événement: Déplacer le bras
+            document.addEventListener('mousemove', (e) => {
+                if (!isDraggingArm) return;
+                
+                // Convertir la position de la souris en angle du bras
+                const newAngle = mouseToArmAngle(e.clientX, e.clientY);
+                armCurrentZAngle = newAngle;
+                
+                // Mettre à jour la position du bras
+                moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
+                
+                e.preventDefault();
+            });
+            
+            document.addEventListener('touchmove', (e) => {
+                if (!isDraggingArm) return;
+                
+                const touch = e.touches[0];
+                const newAngle = mouseToArmAngle(touch.clientX, touch.clientY);
+                armCurrentZAngle = newAngle;
+                
+                moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
+                
+                e.preventDefault();
+            });
+            
+            // Événement: Relâcher le bras
+            document.addEventListener('mouseup', (e) => {
+                if (!isDraggingArm) return;
+                
+                isDraggingArm = false;
+                
+                // Retirer la classe de drag rapide
+                tonearmContainer.classList.remove('dragging');
+                
+                // Vérifier si le bras est au-dessus du disque
+                if (isArmOverVinyl(armCurrentZAngle)) {
+                    console.log('🎵 Bras posé sur le disque à l\'angle:', armCurrentZAngle.toFixed(1), '°');
+                    
+                    // Abaisser le bras sur le disque
+                    isArmLifted = false;
+                    armCurrentHeight = ARM_HEIGHT_PLAYING;
+                    moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
+                    
+                    // Démarrer la lecture à 33 RPM si pas déjà en cours
+                    if (!isRunning || currentRPM !== RPM_33) {
+                        console.log('🎵 Démarrage automatique de la lecture à 33 RPM');
+                        setSpeedAndKnob(RPM_33, set33Btn);
+                        
+                        // Afficher un message
+                        startingMessage.textContent = 'Starting at 33 RPM';
+                        startingMessage.style.display = 'block';
+                        setTimeout(() => {
+                            startingMessage.style.display = 'none';
+                        }, 2000);
+                    }
+                    
+                    // Démarrer l'animation du bras du point actuel vers le centre
+                    // Calculer la durée proportionnelle basée sur la position
+                    const totalAngleRange = ARM_END_Z_ANGLE - ARM_START_Z_ANGLE;
+                    const remainingAngleRange = ARM_END_Z_ANGLE - armCurrentZAngle;
+                    const progressRatio = remainingAngleRange / totalAngleRange;
+                    
+                    // Si le bras est déjà proche du centre, ne pas démarrer l'animation
+                    if (progressRatio > 0.05) {
+                        armStartTime = 0;
+                        currentArmPosition = armCurrentZAngle;
+                        
+                        // Fonction d'animation personnalisée depuis la position actuelle
+                        function animateTonearmFromCurrent(timestamp) {
+                            if (!armStartTime) {
+                                armStartTime = timestamp;
+                            }
+                            const elapsedTime = (timestamp - armStartTime) / 1000;
+                            const remainingDuration = ARM_TOTAL_PLAY_DURATION_SECONDS * progressRatio;
+                            
+                            if (elapsedTime < remainingDuration) {
+                                const progress = elapsedTime / remainingDuration;
+                                const currentAngle = armCurrentZAngle + (ARM_END_Z_ANGLE - armCurrentZAngle) * progress;
+                                
+                                moveTonearmToPosition(currentAngle, ARM_HEIGHT_PLAYING);
+                                armCurrentZAngle = currentAngle;
+                                
+                                animationFrameId = requestAnimationFrame(animateTonearmFromCurrent);
+                            } else {
+                                console.log('✅ Animation bras terminée au centre');
+                                moveTonearmToPosition(ARM_END_Z_ANGLE, ARM_HEIGHT_PLAYING);
+                                armCurrentZAngle = ARM_END_Z_ANGLE;
+                            }
+                        }
+                        
+                        animationFrameId = requestAnimationFrame(animateTonearmFromCurrent);
+                    }
+                } else {
+                    // Le bras n'est pas sur le disque, le ramener au repos
+                    console.log('🎵 Bras ramené au repos');
+                    isArmLifted = false;
+                    armCurrentZAngle = ARM_REST_Z_ANGLE;
+                    armCurrentHeight = ARM_HEIGHT_REST;
+                    moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
+                }
+            });
+            
+            document.addEventListener('touchend', (e) => {
+                if (!isDraggingArm) return;
+                
+                isDraggingArm = false;
+                
+                // Retirer la classe de drag rapide
+                tonearmContainer.classList.remove('dragging');
+                
+                if (isArmOverVinyl(armCurrentZAngle)) {
+                    console.log('🎵 Bras posé sur le disque à l\'angle:', armCurrentZAngle.toFixed(1), '° (tactile)');
+                    
+                    isArmLifted = false;
+                    armCurrentHeight = ARM_HEIGHT_PLAYING;
+                    moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
+                    
+                    if (!isRunning || currentRPM !== RPM_33) {
+                        console.log('🎵 Démarrage automatique de la lecture à 33 RPM');
+                        setSpeedAndKnob(RPM_33, set33Btn);
+                        
+                        startingMessage.textContent = 'Starting at 33 RPM';
+                        startingMessage.style.display = 'block';
+                        setTimeout(() => {
+                            startingMessage.style.display = 'none';
+                        }, 2000);
+                    }
+                    
+                    const totalAngleRange = ARM_END_Z_ANGLE - ARM_START_Z_ANGLE;
+                    const remainingAngleRange = ARM_END_Z_ANGLE - armCurrentZAngle;
+                    const progressRatio = remainingAngleRange / totalAngleRange;
+                    
+                    if (progressRatio > 0.05) {
+                        armStartTime = 0;
+                        currentArmPosition = armCurrentZAngle;
+                        
+                        function animateTonearmFromCurrentTouch(timestamp) {
+                            if (!armStartTime) {
+                                armStartTime = timestamp;
+                            }
+                            const elapsedTime = (timestamp - armStartTime) / 1000;
+                            const remainingDuration = ARM_TOTAL_PLAY_DURATION_SECONDS * progressRatio;
+                            
+                            if (elapsedTime < remainingDuration) {
+                                const progress = elapsedTime / remainingDuration;
+                                const currentAngle = armCurrentZAngle + (ARM_END_Z_ANGLE - armCurrentZAngle) * progress;
+                                
+                                moveTonearmToPosition(currentAngle, ARM_HEIGHT_PLAYING);
+                                armCurrentZAngle = currentAngle;
+                                
+                                animationFrameId = requestAnimationFrame(animateTonearmFromCurrentTouch);
+                            } else {
+                                console.log('✅ Animation bras terminée au centre (tactile)');
+                                moveTonearmToPosition(ARM_END_Z_ANGLE, ARM_HEIGHT_PLAYING);
+                                armCurrentZAngle = ARM_END_Z_ANGLE;
+                            }
+                        }
+                        
+                        animationFrameId = requestAnimationFrame(animateTonearmFromCurrentTouch);
+                    }
+                } else {
+                    console.log('🎵 Bras ramené au repos (tactile)');
+                    isArmLifted = false;
+                    armCurrentZAngle = ARM_REST_Z_ANGLE;
+                    armCurrentHeight = ARM_HEIGHT_REST;
+                    moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
+                }
+            });
 
             // Initialisation à l'arrêt
             setSpeedAndKnob(0, setStopBtn, true); // skipAnimation = true pour l'initialisation
