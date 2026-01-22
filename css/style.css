@@ -1,0 +1,1878 @@
+        /* ------------------------------------ */
+        /* 0. VARIABLES CSS GLOBALES            */
+        /* ------------------------------------ */
+        :root {
+            --color-primary: #c0392b;
+            /* Rouge (Active/Accent) */
+            --color-base: #555;
+            /* Gris foncé (Base platine) */
+            --color-control: #333;
+            /* Noir (Contrôles) */
+            --pitch-slider-color: #2c3e50;
+            --speed-33-duration: 3.00s;
+            /* Durée d'une rotation à 33 RPM */
+            --debug-mode: 0;
+            /* 0 = désactivé, 1 = activé */
+        }
+
+        /* ------------------------------------ */
+        /* 1. CSS Général & Contrôles           */
+        /* ------------------------------------ */
+        body {
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding-top: 100px;
+            /* Espace pour les contrôles fixes */
+            overflow-x: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        .interface-controls {
+            width: 100%;
+            background-color: var(--color-control);
+            color: white;
+            padding: 10px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            z-index: 100;
+        }
+
+        .controls-line {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            padding: 5px 0;
+        }
+
+        .control-btn {
+            cursor: pointer;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            background-color: #777;
+            color: white;
+            transition: background-color 0.2s;
+        }
+
+        .control-btn.active {
+            background-color: var(--color-primary);
+        }
+
+        .control-btn:hover {
+            background-color: #999;
+        }
+
+        .pitch-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #ccc;
+        }
+
+        .pitch-group label {
+            font-size: 14px;
+        }
+
+        .pitch-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100px;
+            height: 10px;
+            background: #999;
+            outline: none;
+            border-radius: 5px;
+            padding: 0;
+        }
+
+        .pitch-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--pitch-slider-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* ------------------------------------ */
+        /* 2. Scène 3D & Platine (Vue 90°)      */
+        /* ------------------------------------ */
+        .scene {
+            perspective: 1500px;
+            width: 90vmin;
+            height: 60vmin;
+            max-width: 900px;
+            max-height: 600px;
+            position: relative;
+            margin: 120px auto 20px;
+            transform-style: preserve-3d;
+            transform-origin: center center;
+        }
+
+        .scene-inner {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transform: rotateX(45deg) rotateZ(-10deg);
+            transform-style: preserve-3d;
+            transform-origin: center center;
+        }
+
+        .scene-base {
+            width: 80vmin;
+            height: 70vmin;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-style: preserve-3d;
+            transform: translate(-50%, -50%) translateZ(0);
+        }
+
+        /* Face supérieure du socle */
+        .scene-base-top {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            background: linear-gradient(135deg, #666 0%, #555 50%, #444 100%);
+            border: 2px solid #333;
+            border-radius: 3vmin;
+            transform: translateZ(6vmin);
+            box-shadow: inset 0 2px 5px rgba(255, 255, 255, 0.1);
+        }
+
+        /* Face avant du socle */
+        .scene-base-front {
+            width: 80vmin;
+            height: 10vmin;
+            position: absolute;
+            background: linear-gradient(180deg, #555 0%, #3a3a3a 50%, #2a2a2a 100%);
+            border: 2px solid #222;
+            border-radius: 0 0 2vmin 2vmin;
+            transform: translateY(70vmin) translateZ(-5vmin) rotateX(90deg);
+            transform-origin: top center;
+        }
+
+        /* Face arrière du socle */
+        .scene-base-back {
+            width: 80vmin;
+            height: 10vmin;
+            position: absolute;
+            background: linear-gradient(180deg, #444 0%, #333 50%, #222 100%);
+            border: 2px solid #1a1a1a;
+            border-radius: 0 0 2vmin 2vmin;
+            transform: translateY(-10vmin) translateZ(-5vmin) rotateX(-90deg);
+            transform-origin: bottom center;
+        }
+
+        /* Côté gauche du socle */
+        .scene-base-left {
+            width: 10vmin;
+            height: 70vmin;
+            position: absolute;
+            background: linear-gradient(180deg, #4a4a4a 0%, #353535 50%, #252525 100%);
+            border: 2px solid #1a1a1a;
+            border-radius: 0 0 2vmin 2vmin;
+            transform: translateX(-5vmin) translateY(0) translateZ(0) rotateY(90deg);
+            transform-origin: center center;
+        }
+
+        /* Côté droit du socle */
+        .scene-base-right {
+            width: 10vmin;
+            height: 70vmin;
+            position: absolute;
+            background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 50%, #1a1a1a 100%);
+            border: 2px solid #111;
+            border-radius: 0 0 2vmin 2vmin;
+            transform: translateX(75vmin) translateY(0) translateZ(0) rotateY(-90deg);
+            transform-origin: center center;
+        }
+
+        /* Pieds du socle */
+        .scene-base-foot {
+            width: 6vmin;
+            height: 6vmin;
+            position: absolute;
+            background: radial-gradient(circle at 40% 40%, #555, #333, #1a1a1a);
+            border-radius: 50%;
+            border: 0.3vmin solid #222;
+            box-shadow:
+                0 0.5vmin 1vmin rgba(0, 0, 0, 0.5),
+                inset 0.2vmin 0.2vmin 0.5vmin rgba(255, 255, 255, 0.2),
+                inset -0.2vmin -0.2vmin 0.5vmin rgba(0, 0, 0, 0.5);
+            transform: translateZ(-10vmin);
+            transform-style: preserve-3d;
+        }
+
+        /* Face inférieure du pied (dessous) */
+        .scene-base-foot::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 60% 60%, #2a2a2a, #1a1a1a, #0a0a0a);
+            border-radius: 50%;
+            border: 0.2vmin solid #111;
+            transform: translateZ(-2vmin);
+            box-shadow: 0 0 0.5vmin rgba(0, 0, 0, 0.8);
+        }
+
+        /* Côté cylindrique du pied */
+        .scene-base-foot::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 2vmin;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateZ(-1vmin);
+            background: linear-gradient(180deg,
+                    #444 0%,
+                    #333 20%,
+                    #2a2a2a 50%,
+                    #222 80%,
+                    #1a1a1a 100%);
+            border-radius: 2vmin / 1vmin;
+            border-left: 0.2vmin solid #1a1a1a;
+            border-right: 0.2vmin solid #1a1a1a;
+            opacity: 0.9;
+        }
+
+        .scene-base-foot1 {
+            left: 4vmin;
+            top: 4vmin;
+        }
+
+        .scene-base-foot2 {
+            right: 4vmin;
+            top: 4vmin;
+        }
+
+        .scene-base-foot3 {
+            left: 4vmin;
+            bottom: 4vmin;
+        }
+
+        .scene-base-foot4 {
+            right: 4vmin;
+            bottom: 4vmin;
+        }
+
+        /* Couleurs distinctes en mode debug */
+        .scene.debug .scene-base-top {
+            background: linear-gradient(135deg, rgba(255, 0, 0, 0.5) 0%, rgba(255, 0, 0, 0.3) 100%);
+        }
+
+        .scene.debug .scene-base-front {
+            background: linear-gradient(180deg, rgba(0, 255, 0, 0.5) 0%, rgba(0, 255, 0, 0.3) 100%);
+        }
+
+        .scene.debug .scene-base-back {
+            background: linear-gradient(180deg, rgba(0, 0, 255, 0.5) 0%, rgba(0, 0, 255, 0.3) 100%);
+        }
+
+        .scene.debug .scene-base-left {
+            background: linear-gradient(180deg, rgba(255, 255, 0, 0.5) 0%, rgba(255, 255, 0, 0.3) 100%);
+        }
+
+        .scene.debug .scene-base-right {
+            background: linear-gradient(180deg, rgba(255, 0, 255, 0.5) 0%, rgba(255, 0, 255, 0.3) 100%);
+        }
+
+        /* ------------------------------------ */
+        /* Repères de débogage 3D               */
+        /* ------------------------------------ */
+        .debug-controls {
+            position: fixed;
+            top: 150px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .scene.debug .debug-controls {
+            display: block;
+        }
+
+        .axis-legend {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 100px;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            display: none;
+            z-index: 1001;
+        }
+
+        .scene.debug .axis-legend {
+            display: block;
+        }
+
+        .axis-legend-title {
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .axis-legend-container {
+            width: 100%;
+            height: 70px;
+            position: relative;
+            transform-style: preserve-3d;
+            perspective: 300px;
+        }
+
+        .axis-legend-inner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform: rotateX(45deg) rotateZ(-10deg);
+            transform-style: preserve-3d;
+        }
+
+        .axis-legend-line {
+            position: absolute;
+            width: 2px;
+            transform-origin: center center;
+            transform-style: preserve-3d;
+        }
+
+        .axis-legend-x {
+            height: 40px;
+            background: linear-gradient(to bottom, #ff0000, #aa0000);
+            left: 50%;
+            top: 50%;
+            transform: translateX(-50%) translateY(-50%) rotateY(90deg) translateZ(20px);
+        }
+
+        .axis-legend-y {
+            height: 40px;
+            background: linear-gradient(to bottom, #00ff00, #00aa00);
+            left: 50%;
+            top: 50%;
+            transform: translateX(-50%) translateY(-50%) translateZ(0px) translateY(-20px);
+        }
+
+        .axis-legend-z {
+            height: 40px;
+            background: linear-gradient(to bottom, #0000ff, #0000aa);
+            left: 50%;
+            top: 50%;
+            transform: translateX(-50%) translateY(-50%) rotateX(90deg) translateZ(20px);
+        }
+
+        .axis-legend-label {
+            position: absolute;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            text-shadow: 0 0 3px #000;
+        }
+
+        .axis-legend-label.x {
+            color: #ff6666;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .axis-legend-label.y {
+            color: #66ff66;
+            left: 50%;
+            top: 5px;
+            transform: translateX(-50%);
+        }
+
+        .axis-legend-label.z {
+            color: #6666ff;
+            left: 50%;
+            bottom: 5px;
+            transform: translateX(-50%);
+        }
+
+        .debug-axis {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-style: preserve-3d;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .scene.debug .debug-axis {
+            opacity: 1;
+        }
+
+        .debug-axis::before {
+            content: '0';
+            position: absolute;
+            left: -15px;
+            top: -25px;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            text-shadow: none;
+        }
+
+        .axis-x,
+        .axis-y,
+        .axis-z {
+            position: absolute;
+            width: 60vmin;
+            height: 3px;
+            transform-origin: 0 0;
+        }
+
+        .axis-x {
+            background: red;
+            transform: translateX(0);
+        }
+
+        .axis-x::before {
+            content: '-X';
+            position: absolute;
+            left: -30px;
+            top: -10px;
+            color: red;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 0 3px #000;
+        }
+
+        .axis-x::after {
+            content: '+X';
+            position: absolute;
+            right: -30px;
+            top: -10px;
+            color: red;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 0 3px #000;
+        }
+
+        .axis-y {
+            background: green;
+            transform: rotateZ(90deg);
+        }
+
+        .axis-y::before {
+            content: '-Y';
+            position: absolute;
+            left: -30px;
+            top: -10px;
+            color: green;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 0 3px #000;
+        }
+
+        .axis-y::after {
+            content: '+Y';
+            position: absolute;
+            right: -30px;
+            top: -10px;
+            color: green;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 0 3px #000;
+        }
+
+        .axis-z {
+            background: blue;
+            transform: rotateY(90deg);
+        }
+
+        .axis-z::before {
+            content: '-Z';
+            position: absolute;
+            left: -30px;
+            top: -10px;
+            color: blue;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 0 3px #000;
+        }
+
+        .axis-z::after {
+            content: '+Z';
+            position: absolute;
+            right: -30px;
+            top: -10px;
+            color: blue;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 0 3px #000;
+        }
+
+        /* Boîtes de délimitation pour debug */
+        .debug-box {
+            position: absolute;
+            border: 2px dashed;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .scene.debug .debug-box {
+            opacity: 0.6;
+        }
+
+        .debug-box-base {
+            width: 100%;
+            height: 100%;
+            border-color: yellow;
+            top: 0;
+            left: 0;
+        }
+
+        .debug-box-record {
+            width: 65vmin;
+            height: 65vmin;
+            border-color: cyan;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .debug-box-arm {
+            width: 30vmin;
+            height: 30vmin;
+            border-color: magenta;
+            top: 55%;
+            left: 30%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Lignes de debug pour le bras */
+        .debug-arm-line {
+            position: absolute;
+            height: 2px;
+            background: magenta;
+            transform-origin: 0 50%;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .scene.debug .debug-arm-line {
+            opacity: 0.8;
+        }
+
+        .debug-arm-pivot {
+            position: absolute;
+            width: 4vmin;
+            height: 4vmin;
+            border: 2px solid magenta;
+            border-radius: 50%;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            transform: translate(-50%, -50%);
+        }
+
+        .scene.debug .debug-arm-pivot {
+            opacity: 0.8;
+        }
+
+        .debug-arm-center {
+            position: absolute;
+            width: 2vmin;
+            height: 2vmin;
+            background: cyan;
+            border-radius: 50%;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            transform: translate(-50%, -50%);
+        }
+
+        .scene.debug .debug-arm-center {
+            opacity: 0.8;
+        }
+
+        .debug-arm-label {
+            position: absolute;
+            background: rgba(255, 0, 255, 0.8);
+            color: white;
+            padding: 2px 5px;
+            font-size: 10px;
+            border-radius: 3px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 101;
+        }
+
+        .scene.debug .debug-arm-label {
+            opacity: 1;
+        }
+
+        /* Marqueurs de position du bras sur le disque */
+        .arm-position-marker {
+            position: absolute;
+            width: 3vmin;
+            height: 3vmin;
+            border-radius: 50%;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 12;
+            transform: translate(-50%, -50%);
+            border: 2px solid;
+        }
+
+        .scene.debug .arm-position-marker {
+            opacity: 0.8;
+        }
+
+        .arm-position-start {
+            border-color: #00ff00;
+            background: radial-gradient(circle, rgba(0, 255, 0, 0.3), transparent);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+        }
+
+        .arm-position-end {
+            border-color: #ff0000;
+            background: radial-gradient(circle, rgba(255, 0, 0, 0.3), transparent);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+        }
+
+        .arm-position-label {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 2px 6px;
+            font-size: 11px;
+            border-radius: 3px;
+            white-space: nowrap;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Grille de référence */
+        /* Grille XZ (plan horizontal) */
+        .debug-grid-xz {
+            position: absolute;
+            width: 100vmin;
+            height: 100vmin;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateZ(0) rotateX(90deg);
+            transform-style: preserve-3d;
+            opacity: 0;
+            pointer-events: none;
+            background-image:
+                repeating-linear-gradient(0deg, rgba(0, 150, 180, 0.7) 0px, transparent 1px, transparent 10vmin, rgba(0, 150, 180, 0.7) calc(10vmin + 1px)),
+                repeating-linear-gradient(90deg, rgba(0, 150, 180, 0.7) 0px, transparent 1px, transparent 10vmin, rgba(0, 150, 180, 0.7) calc(10vmin + 1px));
+            border: 2px solid rgba(0, 150, 180, 0.9);
+        }
+
+        /* Grille YZ (plan vertical latéral) */
+        .debug-grid-yz {
+            position: absolute;
+            width: 100vmin;
+            height: 100vmin;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateX(-50vmin) rotateY(90deg);
+            transform-style: preserve-3d;
+            opacity: 0;
+            pointer-events: none;
+            background-image:
+                repeating-linear-gradient(0deg, rgba(150, 0, 150, 0.7) 0px, transparent 1px, transparent 10vmin, rgba(150, 0, 150, 0.7) calc(10vmin + 1px)),
+                repeating-linear-gradient(90deg, rgba(150, 0, 150, 0.7) 0px, transparent 1px, transparent 10vmin, rgba(150, 0, 150, 0.7) calc(10vmin + 1px));
+            border: 2px solid rgba(150, 0, 150, 0.9);
+        }
+
+        /* Grille XY (plan vertical frontal) */
+        .debug-grid-xy {
+            position: absolute;
+            width: 100vmin;
+            height: 100vmin;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateZ(-50vmin);
+            transform-style: preserve-3d;
+            opacity: 0;
+            pointer-events: none;
+            background-image:
+                repeating-linear-gradient(0deg, rgba(200, 100, 0, 0.7) 0px, transparent 1px, transparent 10vmin, rgba(200, 100, 0, 0.7) calc(10vmin + 1px)),
+                repeating-linear-gradient(90deg, rgba(200, 100, 0, 0.7) 0px, transparent 1px, transparent 10vmin, rgba(200, 100, 0, 0.7) calc(10vmin + 1px));
+            border: 2px solid rgba(200, 100, 0, 0.9);
+        }
+
+        .scene.debug .debug-grid-xz,
+        .scene.debug .debug-grid-yz,
+        .scene.debug .debug-grid-xy {
+            opacity: 1;
+        }
+
+        /* Labels pour les grilles */
+        .grid-label {
+            position: absolute;
+            font-size: 2vmin;
+            font-weight: bold;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 0.3vmin 0.6vmin;
+            border-radius: 0.3vmin;
+            pointer-events: none;
+            opacity: 0;
+            text-shadow: 0 0 3px black;
+        }
+
+        .scene.debug .grid-label {
+            opacity: 1;
+        }
+
+        /* Labels pour la grille XZ (plan horizontal) */
+        .grid-label-xz {
+            transform: rotateX(-90deg) translateZ(0.5vmin);
+        }
+
+        /* Labels pour la grille YZ (plan vertical latéral) */
+        .grid-label-yz {
+            transform: rotateY(-90deg) translateZ(0.5vmin);
+        }
+
+        /* Labels pour la grille XY (plan vertical frontal) */
+        .grid-label-xy {
+            transform: translateZ(0.5vmin);
+        }
+
+        /* Labels d'axes (noms des axes) */
+        .axis-name {
+            position: absolute;
+            font-size: 3vmin;
+            font-weight: bold;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 0.5vmin 1vmin;
+            border-radius: 0.5vmin;
+            pointer-events: none;
+            opacity: 0;
+            text-shadow: 0 0 5px black;
+        }
+
+        .scene.debug .axis-name {
+            opacity: 1;
+        }
+
+        /* Croix rouge de marquage de position */
+        .position-marker {
+            position: absolute;
+            width: 4vmin;
+            height: 4vmin;
+            opacity: 0;
+            pointer-events: none;
+            transform-style: preserve-3d;
+            transform-style: preserve-3d;
+        }
+
+        .scene.debug .position-marker {
+            opacity: 1;
+        }
+
+        .position-marker::before,
+        .position-marker::after {
+            content: '';
+            position: absolute;
+            background-color: red;
+            top: 50%;
+            left: 50%;
+        }
+
+        .position-marker::before {
+            width: 100%;
+            height: 0.5vmin;
+            transform: translate(-50%, -50%);
+        }
+
+        .position-marker::after {
+            width: 0.5vmin;
+            height: 100%;
+            transform: translate(-50%, -50%);
+        }
+
+        .position-marker-blue::before,
+        .position-marker-blue::after {
+            background-color: blue;
+        }
+
+        .turntable-base {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateZ(2vmin);
+            transform-origin: center center;
+            transform-style: preserve-3d;
+            z-index: 15;
+        }
+
+        /* ------------------------------------ */
+        /* 3. SÉLECTEUR DE VITESSE (Compensation) */
+        /* ------------------------------------ */
+        .speed-selector-container {
+            position: absolute;
+            left: 50%;
+            top: 3%;
+            transform: translateX(-50%) translateX(-32vmin) translateY(52vmin) translateZ(7vmin) rotateZ(348deg);
+            transform-style: preserve-3d;
+            z-index: 10;
+        }
+
+        .selector-label {
+            display: none;
+        }
+
+        .selector-base {
+            width: 5vmin;
+            height: 9vmin;
+            background-image: url('https://tclaret.github.io/turntable/img/ChickenHead.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 50%;
+            position: relative;
+            box-shadow:
+                0 0.5vmin 1vmin rgba(0, 0, 0, 0.4),
+                0 1vmin 2vmin rgba(0, 0, 0, 0.3),
+                inset 0.3vmin 0.3vmin 0.8vmin rgba(255, 255, 255, 0.3),
+                inset -0.3vmin -0.3vmin 0.8vmin rgba(0, 0, 0, 0.4),
+                0 0 2vmin 0.5vmin rgba(0, 255, 0, 0.6);
+            transition: transform 0.3s ease-in-out;
+            transform-style: preserve-3d;
+            filter: drop-shadow(0 0.8vmin 1.5vmin rgba(0, 0, 0, 0.5));
+        }
+
+        .speed-points-container {
+            position: absolute;
+            top: -0.8vmin;
+            left: 50%;
+            transform: translateX(-50%) rotateZ(0deg);
+            width: 8vmin;
+            height: 3.5vmin;
+            pointer-events: none;
+            z-index: 11;
+        }
+
+        .speed-point {
+            position: absolute;
+            width: 1.5vmin;
+            height: 1.5vmin;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            pointer-events: all;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 0.5vmin rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .speed-point::after {
+            content: attr(data-label);
+            position: absolute;
+            font-size: 1.2vmin;
+            font-weight: bold;
+            color: rgba(0, 0, 0, 0.7);
+            white-space: nowrap;
+            text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+            pointer-events: none;
+        }
+
+        .speed-point-33::after {
+            right: 1.5vmin;
+        }
+
+        .speed-point-stop::after {
+            top: -1.2vmin;
+        }
+
+        .speed-point-45::after {
+            left: 1.5vmin;
+        }
+
+        .speed-point:hover {
+            background: rgba(255, 255, 255, 0.5);
+            transform: scale(1.2);
+        }
+
+        .speed-point.active {
+            background: rgba(0, 255, 0, 0.8);
+            box-shadow: 0 0 1vmin rgba(0, 255, 0, 0.8);
+        }
+
+        .speed-point-33 {
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .speed-point-stop {
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+        }
+
+        .speed-point-45 {
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .selector-base::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.4) 0%,
+                    transparent 40%,
+                    transparent 60%,
+                    rgba(0, 0, 0, 0.3) 100%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .selector-base::after {
+            content: '';
+            position: absolute;
+            top: -0.5vmin;
+            left: -0.5vmin;
+            width: calc(100% + 1vmin);
+            height: calc(100% + 1vmin);
+            background: radial-gradient(circle at 30% 30%,
+                    rgba(255, 255, 255, 0.15) 0%,
+                    transparent 50%);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translateZ(0.5vmin);
+        }
+
+        .selector-knob {
+            width: 4vw;
+            height: 4vw;
+            background-color: transparent;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .selector-knob::before {
+            content: '';
+            position: absolute;
+            width: 1.8vw;
+            height: 0.6vw;
+            background-color: var(--color-primary);
+            top: 0.5vw;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 1px;
+        }
+
+        /* ------------------------------------ */
+        /* Pitch Control à droite               */
+        /* ------------------------------------ */
+        .pitch-control-container {
+            position: absolute;
+            left: 50%;
+            top: 1%;
+            transform: translateX(-50%) translateX(34vmin) translateY(40vmin) translateZ(5vmin);
+            transform-style: preserve-3d;
+            z-index: 10;
+        }
+
+        .pitch-control-base {
+            width: 2vmin;
+            height: 18vmin;
+            background-color: #333;
+            border-radius: 1vmin;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5) inset, 0 0 20px 5px rgba(255, 0, 0, 0.8);
+            border: 0.3vmin solid #555;
+        }
+
+        .pitch-control-knob {
+            width: 2.5vw;
+            height: 2vw;
+            background-color: var(--pitch-slider-color);
+            border-radius: 0.5vw;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
+            cursor: pointer;
+            border: 0.2vw solid #444;
+            transition: top 0.2s ease;
+        }
+
+        .pitch-control-knob::before {
+            content: '';
+            position: absolute;
+            width: 1vw;
+            height: 0.3vw;
+            background-color: white;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 1px;
+        }
+
+        /* ------------------------------------ */
+        /* 4. BRAS DE LECTURE (Positionnement corrigé) */
+        /* ------------------------------------ */
+        .tonearm-container {
+            position: absolute;
+            left: calc(50% + 30vmin);
+            /* X=3 */
+            top: calc(50% - 10vmin);
+            /* Y=-1 */
+            z-index: 50;
+
+            transform: translate(-50%, -50%) translateZ(7vmin) rotateZ(-90deg) rotateX(-5deg);
+            /* Z=7 (above turntable-base at 2vmin and record at 6.5vmin) */
+            /* Initial position: ARM_REST_Z_ANGLE (-90deg) and ARM_HEIGHT_REST (-5deg) */
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                filter 0.8s ease-out;
+
+            width: 7vmin;
+            height: 7vmin;
+            /* Plus grand pour le gimbal */
+            background: radial-gradient(circle at 35% 35%, #333, #111);
+            border-radius: 50%;
+            border: 0.2vmin solid #000;
+            box-shadow:
+                0 0.5vmin 1.5vmin rgba(0, 0, 0, 0.7),
+                inset 0.2vmin 0.2vmin 0.5vmin rgba(255, 255, 255, 0.2);
+
+            transform-origin: center center;
+            pointer-events: auto;
+            /* Allow interaction with child elements */
+        }
+
+        /* When dragging the arm, use faster transition */
+        .tonearm-container.dragging {
+            transition: transform 0.1s linear, filter 0.1s linear;
+        }
+
+        /* Gimbal ring detail */
+        .tonearm-gimbal-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5vmin;
+            height: 5vmin;
+            border: 0.8vmin solid #222;
+            border-radius: 50%;
+            transform: translate(-50%, -50%) translateZ(8vmin) rotateX(45deg);
+            box-shadow: 0 0.2vmin 0.5vmin rgba(0, 0, 0, 0.5);
+            transform-style: preserve-3d;
+        }
+
+        .tonearm-gimbal-ring::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4vmin;
+            height: 0.5vmin;
+            background: #444;
+            transform: translate(-50%, -50%) rotateY(90deg);
+        }
+
+        /* Contrepoids à l'arrière du pivot */
+        /* Contrepoids à l'arrière du pivot */
+        .tonearm-counterweight {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 3vmin;
+            height: 4vmin;
+            /* Plus court, plus trapu */
+            transform: translate(-50%, -50%) translateX(6vmin) translateZ(6vmin) rotateY(90deg);
+            transform-style: preserve-3d;
+            background: linear-gradient(90deg, #111, #333 50%, #111);
+            border-radius: 50%;
+            /* Cylindrique */
+            box-shadow:
+                0 0.5vmin 1vmin rgba(0, 0, 0, 0.6),
+                inset 0 0 0.5vmin rgba(255, 255, 255, 0.1);
+            border: 0.1vmin solid #000;
+        }
+
+        /* Anneau argenté sur le contrepoids */
+        .tonearm-counterweight::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 30%;
+            top: 20%;
+            left: 0;
+            background: linear-gradient(90deg, #888, #eee 40%, #888);
+            box-shadow: 0 0 0.2vmin rgba(0, 0, 0, 0.3);
+        }
+
+        .tonearm-counterweight::after {
+            content: '';
+            position: absolute;
+            width: 80%;
+            height: 80%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateZ(-1vmin);
+            background: #222;
+            border-radius: 50%;
+        }
+
+        .tonearm-image {
+            width: 28vmin;
+            height: 9vmin;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: 0% 50%;
+            transform: translate(-6%, -50%) translateZ(7vmin) rotateZ(180deg);
+            transform-style: preserve-3d;
+        }
+
+        /* SVG du bras avec courbe de Bézier */
+        .tonearm-image svg,
+        .tonearm-image img {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Ancien style pour ::before supprimé */
+
+        /* Levier de levée du bras */
+        .tonearm-lift {
+            position: absolute;
+            left: 18vmin;
+            top: calc(50% - 5vmin);
+            transform: translateY(-50%);
+            width: 1vmin;
+            height: 4vmin;
+            background: linear-gradient(90deg, #888, #666, #444);
+            border-radius: 0.5vmin;
+            box-shadow:
+                0 0.2vmin 0.4vmin rgba(0, 0, 0, 0.4),
+                inset 0.1vmin 0 0.2vmin rgba(255, 255, 255, 0.3);
+        }
+
+        .tonearm-lift::before {
+            content: '';
+            position: absolute;
+            top: -1vmin;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1.5vmin;
+            height: 1.5vmin;
+            background: radial-gradient(circle at 40% 40%, #999, #666, #444);
+            border-radius: 50%;
+            border: 0.15vmin solid #333;
+            box-shadow:
+                0 0.2vmin 0.4vmin rgba(0, 0, 0, 0.4),
+                inset 0.1vmin 0.1vmin 0.3vmin rgba(255, 255, 255, 0.3);
+        }
+
+        /* Levier de levée fixe sur le côté droit */
+        .tonearm-lift-fixed {
+            position: absolute;
+            left: 50%;
+            top: 3%;
+            transform: translateX(-50%) translateX(37vmin) translateY(50vmin) translateZ(6vmin);
+            transform-style: preserve-3d;
+            width: 1.5vmin;
+            height: 5vmin;
+            background: linear-gradient(90deg, #888, #666, #444);
+            border-radius: 0.75vmin;
+            box-shadow:
+                0 0.3vmin 0.6vmin rgba(0, 0, 0, 0.4),
+                inset 0.15vmin 0 0.3vmin rgba(255, 255, 255, 0.3);
+            z-index: 10;
+        }
+
+        .tonearm-lift-fixed::before {
+            content: '';
+            position: absolute;
+            top: -1.2vmin;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2vmin;
+            height: 2vmin;
+            background: radial-gradient(circle at 40% 40%, #999, #666, #444);
+            border-radius: 50%;
+            border: 0.2vmin solid #333;
+            box-shadow:
+                0 0.3vmin 0.5vmin rgba(0, 0, 0, 0.4),
+                inset 0.15vmin 0.15vmin 0.4vmin rgba(255, 255, 255, 0.3);
+        }
+
+        .tonearm-lift-fixed::after {
+            content: '';
+            position: absolute;
+            bottom: -0.5vmin;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2.5vmin;
+            height: 1vmin;
+            background: linear-gradient(180deg, #555, #333);
+            border-radius: 0.5vmin;
+            box-shadow: 0 0.2vmin 0.4vmin rgba(0, 0, 0, 0.5);
+        }
+
+        /* Ancien style supprimé */
+
+        /* Tête de lecture au bout du bras */
+
+        /* Tête de lecture au bout du bras */
+        /* Tête de lecture au bout du bras */
+        .tonearm-headshell {
+            position: absolute;
+            right: -1vmin;
+            top: 50%;
+            transform: translateY(-50%) rotateZ(20deg) translateZ(0.5vmin);
+            /* Rotation 20° clockwise + profondeur 3D */
+            transform-origin: left center;
+            width: 5vmin;
+            height: 2.5vmin;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
+            /* Noir mat style Ortofon */
+            border-radius: 0.3vmin;
+            border: 0.15vmin solid #0a0a0a;
+            box-shadow:
+                0 0.5vmin 1.2vmin rgba(0, 0, 0, 0.8),
+                0 0.2vmin 0.5vmin rgba(0, 0, 0, 0.6),
+                inset 0.1vmin 0.1vmin 0.3vmin rgba(255, 255, 255, 0.1),
+                inset -0.1vmin -0.1vmin 0.3vmin rgba(0, 0, 0, 0.5);
+            transform-style: preserve-3d;
+            cursor: grab;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .tonearm-headshell:hover {
+            transform: translateY(-50%) rotateZ(20deg) translateZ(1vmin);
+            box-shadow:
+                0 0.8vmin 1.8vmin rgba(0, 0, 0, 0.9),
+                0 0.4vmin 0.8vmin rgba(0, 0, 0, 0.7),
+                inset 0.1vmin 0.1vmin 0.3vmin rgba(255, 255, 255, 0.15);
+            cursor: grab;
+        }
+
+        .tonearm-headshell:active {
+            cursor: grabbing;
+        }
+
+        /* Aiguille de la tête de lecture - pointe diamant */
+        .tonearm-headshell::before {
+            content: '';
+            position: absolute;
+            right: 0.8vmin;
+            bottom: -0.8vmin;
+            width: 0.4vmin;
+            height: 1vmin;
+            background: linear-gradient(180deg, #ddd 0%, #fff 50%, #eee 100%);
+            border-radius: 0.2vmin;
+            box-shadow:
+                0 0.2vmin 0.4vmin rgba(0, 0, 0, 0.6),
+                0 0 0.3vmin rgba(255, 255, 255, 0.8);
+            transform: translateZ(0.2vmin);
+        }
+
+        /* Cartouche style Ortofon - rouge et blanc sans texte */
+        .tonearm-headshell::after {
+            content: '';
+            display: none;
+            /* Cartouche supprimée */
+        }
+
+        /* Crochet - petit finger lift qui sort vers X+ (droite) */
+        /* Crochet - Modified to be curved finger lift */
+        .tonearm-lift-hook {
+            position: absolute;
+            right: -3.2vmin;
+            /* Moved relative to headshell */
+            top: 25%;
+            transform: translateY(-50%) translateZ(0.5vmin) rotateZ(-10deg);
+            width: 2.8vmin;
+            height: 1.8vmin;
+            background: transparent;
+            /* Curved wire effect using borders */
+            border-bottom: 0.35vmin solid #2c3e50;
+            border-right: 0.35vmin solid #2c3e50;
+            border-radius: 0 0 80% 0;
+            /* Bottom-right curve */
+
+            cursor: grab;
+            transition: all 0.3s ease;
+            pointer-events: auto;
+            box-shadow: none;
+            filter: drop-shadow(0.15vmin 0.15vmin 0.2vmin rgba(0, 0, 0, 0.6));
+        }
+
+        .tonearm-lift-hook:hover {
+            border-color: #3498db;
+            filter: drop-shadow(0 0 0.5vmin rgba(52, 152, 219, 0.7));
+            transform: translateY(-50%) translateZ(1vmin) rotateZ(-10deg) scale(1.05);
+            cursor: grab !important;
+        }
+
+        .tonearm-lift-hook:active {
+            cursor: grabbing !important;
+            transform: translateY(-50%) translateZ(0.3vmin) rotateZ(-10deg);
+        }
+
+        /* Highlight when grabbing */
+        .tonearm-container.dragging .tonearm-lift-hook {
+            border-color: #e74c3c;
+            filter: drop-shadow(0 0 0.8vmin rgba(231, 76, 60, 0.8));
+        }
+
+        /* Poignée au bout du finger lift */
+        .tonearm-lift-hook::before {
+            content: '';
+            position: absolute;
+            right: -0.5vmin;
+            /* Aligned with top-right of curve */
+            top: -0.5vmin;
+            width: 1.1vmin;
+            height: 0.8vmin;
+            background: linear-gradient(90deg, #2c3e50, #1a1a1a);
+            border-radius: 0.2vmin;
+            /* Flat tab style handle */
+            transform: rotate(15deg);
+            box-shadow: 0.1vmin 0.1vmin 0.3vmin rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .tonearm-lift-hook:hover::before {
+            background: linear-gradient(90deg, #3498db, #2980b9);
+        }
+
+        /* Point d'attache sur la headshell (début du fil) */
+        .tonearm-lift-hook::after {
+            content: '';
+            position: absolute;
+            left: -0.2vmin;
+            bottom: -0.35vmin;
+            /* Match border width */
+            width: 0.5vmin;
+            height: 0.5vmin;
+            background: #2c3e50;
+            border-radius: 50%;
+        }
+
+        /* Ajouter des vis chromées sur la tête de lecture */
+        .tonearm-headshell-screw {
+            position: absolute;
+            width: 0.4vmin;
+            height: 0.4vmin;
+            background: radial-gradient(circle at 30% 30%, #fff, #ddd, #999);
+            border-radius: 50%;
+            border: 0.05vmin solid #666;
+            box-shadow:
+                0 0.1vmin 0.2vmin rgba(0, 0, 0, 0.5),
+                inset 0.05vmin 0.05vmin 0.1vmin rgba(255, 255, 255, 0.8);
+            transform: translateZ(0.4vmin);
+        }
+
+        .tonearm-headshell-screw:nth-child(1) {
+            left: 0.5vmin;
+            top: 0.4vmin;
+        }
+
+        .tonearm-headshell-screw:nth-child(2) {
+            left: 0.5vmin;
+            bottom: 0.4vmin;
+        }
+
+        /* Tonearm rest stand */
+        .tonearm-rest {
+            position: absolute;
+            left: calc(50% + 30vmin);
+            top: calc(50% - 10vmin);
+            width: 2vmin;
+            height: 3vmin;
+            transform: translate(-50%, -50%) translateZ(0vmin) rotateZ(-90deg) translateX(16vmin);
+            transform-style: preserve-3d;
+            z-index: 45;
+        }
+
+        .tonearm-rest::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #666, #444, #333);
+            border-radius: 0.3vmin;
+            box-shadow: 0 0.3vmin 0.6vmin rgba(0, 0, 0, 0.5);
+        }
+
+        .tonearm-rest::after {
+            content: '';
+            position: absolute;
+            top: -0.5vmin;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3vmin;
+            height: 0.5vmin;
+            background: linear-gradient(90deg, #555, #777, #555);
+            border-radius: 50%;
+            box-shadow: 0 0.2vmin 0.4vmin rgba(0, 0, 0, 0.4);
+        }
+
+        /* ------------------------------------ */
+        /* 5. Disque Vinyle (Compensation)      */
+        /* ------------------------------------ */
+        .record-container {
+            width: 65vmin;
+            height: 65vmin;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateZ(6.5vmin);
+            transform-style: preserve-3d;
+            transform-origin: center center;
+            background-color: #888;
+            border-radius: 50%;
+            z-index: 10;
+        }
+
+        .platter {
+            width: 90%;
+            height: 90%;
+            background-color: #444;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .vinyl-record {
+            width: 90%;
+            height: 90%;
+            border-radius: 50%;
+            background-image: url('https://tclaret.github.io/turntable/img/DISC.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border: 0.5vw solid #0a0a0a;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: spin var(--speed-33-duration) linear infinite paused;
+            transform-origin: center center;
+            cursor: grab;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .vinyl-record:hover {
+            box-shadow: 0 0 25px rgba(192, 57, 43, 0.5);
+        }
+
+        .vinyl-record.scratching {
+            cursor: grabbing;
+            animation-play-state: paused !important;
+        }
+
+        /* Glow rouge visible uniquement en mode debug */
+        .scene.debug .vinyl-record.scratching {
+            box-shadow: 0 0 45px rgba(192, 57, 43, 0.95), 0 0 80px rgba(231, 76, 60, 0.5);
+            filter: brightness(1.1);
+        }
+
+        .vinyl-record::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1.5vw;
+            height: 1.5vw;
+            border-radius: 50%;
+            background-color: #000;
+            z-index: 2;
+            opacity: 0;
+        }
+
+        .scene.debug .vinyl-record::after {
+            opacity: 1;
+        }
+
+        @keyframes spin {
+            from {
+                transform: translate(-50%, -50%) rotateZ(0deg);
+            }
+
+            to {
+                transform: translate(-50%, -50%) rotateZ(360deg);
+            }
+        }
+
+        @keyframes spin-reverse {
+            from {
+                transform: translate(-50%, -50%) rotateZ(0deg);
+            }
+
+            to {
+                transform: translate(-50%, -50%) rotateZ(-360deg);
+            }
+        }
+
+        /* Indicateur de vitesse de scratch */
+        .scratch-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 28px;
+            font-weight: bold;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            border: 2px solid rgba(192, 57, 43, 0.8);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .scratch-indicator.visible {
+            opacity: 1;
+        }
+
+        .scratch-indicator .speed-value {
+            color: #e74c3c;
+            font-size: 36px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            font-family: 'Courier New', monospace;
+        }
+
+        .scratch-indicator::before {
+            content: '🎵 SCRATCH ';
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-right: 10px;
+        }
+
+        /* Compteur de temps audio en mode debug */
+        .audio-time-counter {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #0f0;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 150;
+        }
+
+        .scene.debug .audio-time-counter {
+            opacity: 1;
+        }
+
+        /* Repères d'angle sur le disque */
+        .angle-marker {
+            position: absolute;
+            width: 2px;
+            height: 25vmin;
+            background: rgba(255, 255, 0, 0.7);
+            top: 50%;
+            left: 50%;
+            transform-origin: center center;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 5;
+        }
+
+        .scene.debug .angle-marker {
+            opacity: 1;
+        }
+
+        .angle-marker::before {
+            content: attr(data-angle);
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: yellow;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .angle-marker-0 {
+            transform: translate(-50%, -50%) rotate(0deg);
+        }
+
+        .angle-marker-90 {
+            transform: translate(-50%, -50%) rotate(90deg);
+        }
+
+        .angle-marker-180 {
+            transform: translate(-50%, -50%) rotate(180deg);
+        }
+
+        .angle-marker-270 {
+            transform: translate(-50%, -50%) rotate(270deg);
+        }
+
+        /* Message de démarrage */
+        .starting-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            font-size: 24px;
+            font-weight: normal;
+            z-index: 999;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            text-transform: lowercase;
+            letter-spacing: 1px;
+        }
+
+        .starting-message.visible {
+            opacity: 1;
+        }
+
+        .starting-message::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+
+            0%,
+            20% {
+                content: '.';
+            }
+
+            40% {
+                content: '..';
+            }
+
+            60%,
+            100% {
+                content: '...';
+            }
+        }
+
+        /* ------------------------------------ */
+        /* Overlay de sélection de vitesse      */
+        /* ------------------------------------ */
+        .speed-overlay {
+            display: none;
+        }
+
+        .speed-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .speed-selector-panel {
+            background-color: #333;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .speed-selector-panel h3 {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 20px;
+            margin-top: 0;
+        }
+
+        .speed-option {
+            display: block;
+            width: 200px;
+            padding: 15px 20px;
+            margin: 10px auto;
+            font-size: 18px;
+            font-weight: bold;
+            border: 2px solid #555;
+            border-radius: 5px;
+            background-color: #444;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .speed-option:hover {
+            background-color: #555;
+            border-color: #777;
+        }
+
+        .speed-option.selected {
+            background-color: var(--color-primary);
+            border-color: var(--color-primary);
+        }
+
+        /* ------------------------------------ */
+        /* Media Queries - Mode Portrait/Mobile */
+        /* ------------------------------------ */
+        @media (orientation: portrait) {
+            .scene {
+                width: 95vw;
+                height: 95vw;
+                max-width: 600px;
+                max-height: 600px;
+                margin-top: 120px;
+            }
+
+            body {
+                padding-top: 110px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .interface-controls {
+                padding: 8px 0;
+            }
+
+            .controls-line {
+                gap: 10px;
+                padding: 3px 0;
+            }
+
+            .control-btn {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+
+            .pitch-group label {
+                font-size: 12px;
+            }
+
+            .pitch-slider {
+                width: 80px;
+            }
+        }
+
+        /* Contrôles de zoom mobile */
+        .zoom-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .zoom-controls {
+                display: flex;
+            }
+
+            .speed-selector-container {
+                transform: translateX(-50%) translateX(-32vmin) translateY(70vmin) translateZ(7vmin) rotateZ(348deg);
+            }
+
+            .pitch-control-container {
+                transform: translateX(-50%) translateX(34vmin) translateY(60vmin) translateZ(5vmin);
+            }
+
+            .scene {
+                margin: auto;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .zoom-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .zoom-btn:active {
+            transform: scale(0.9);
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        /* Ajustements pour mobile landscape */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .speed-selector-container {
+                transform: translateX(-50%) translateX(-25vmin) translateY(60vmin) translateZ(5vmin) rotateZ(348deg);
+            }
+
+            .pitch-control-container {
+                transform: translateX(-50%) translateX(34vmin) translateY(53vmin) translateZ(5vmin);
+            }
+
+            .scene {
+                width: 85vw;
+                height: 85vw;
+                max-width: 500px;
+                max-height: 500px;
+            }
+        }
