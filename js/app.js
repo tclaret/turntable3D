@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scene = document.querySelector('.scene');
     const audioTimeCounter = document.getElementById('audio-time-counter');
     const timeDisplay = document.getElementById('time-display');
+    const tonearmDragZone = document.querySelector('.tonearm-drag-zone');
 
     // ------------------------------------
     // CONSTANTS & CONFIGURATION
@@ -647,6 +648,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tonearmLiftHook.addEventListener('mousedown', handleStart);
         tonearmLiftHook.addEventListener('touchstart', handleStart);
+        
+        // Ajout des événements sur la zone de drag élargie
+        if (tonearmDragZone) {
+            tonearmDragZone.addEventListener('mousedown', handleStart);
+            tonearmDragZone.addEventListener('touchstart', handleStart);
+        }
     }
 
     const handleMove = (e) => {

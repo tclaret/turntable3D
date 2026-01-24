@@ -3,8 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Turntable 3D - Tone.js Audio Engine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turntable 3D - stratching ! </title>
     <!-- Link to new external CSS file -->
     <link rel="stylesheet" href="css/style.css">
     <!-- Inline styles that are critical or very specific could remain, but we moved everything -->
@@ -77,10 +77,16 @@
             <div class="turntable-base">
                 <div class="speed-selector-container">
                     <div class="speed-points-container">
-                        <div class="speed-point speed-point-33" data-speed="33" data-label="33" title="33 RPM"></div>
+                        <div class="speed-point speed-point-45" data-speed="45" data-label="45" title="45 RPM">
+                            <div class="speed-drag-zone"></div>
+                        </div>
                         <div class="speed-point speed-point-stop active" data-speed="stop" data-label="STOP"
-                            title="STOP"></div>
-                        <div class="speed-point speed-point-45" data-speed="45" data-label="45" title="45 RPM"></div>
+                            title="STOP">
+                            <div class="speed-drag-zone"></div>
+                        </div>
+                        <div class="speed-point speed-point-33" data-speed="33" data-label="33" title="33 RPM">
+                            <div class="speed-drag-zone"></div>
+                        </div>
                     </div>
                     <div class="selector-base">
                         <div id="speed-knob" class="selector-knob"></div>
@@ -134,7 +140,9 @@
                         <div class="tonearm-headshell">
                             <div class="tonearm-headshell-screw"></div>
                             <div class="tonearm-headshell-screw"></div>
-                            <div class="tonearm-lift-hook"></div>
+                            <div class="tonearm-lift-hook">
+                                <div class="tonearm-drag-zone"></div>
+                            </div>
                         </div>
                     </div>
                 </div>

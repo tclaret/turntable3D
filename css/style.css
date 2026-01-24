@@ -897,6 +897,43 @@
             justify-content: center;
         }
 
+        /* Zone de sélection élargie pour les points de vitesse */
+        .speed-drag-zone {
+            position: absolute;
+            width: 4vmin;
+            height: 4vmin;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(52, 152, 219, 0.15);
+            border: 0.2vmin solid rgba(52, 152, 219, 0.3);
+            border-radius: 50%;
+            cursor: pointer;
+            pointer-events: all;
+            transition: all 0.3s ease;
+            opacity: 0;
+            z-index: 1;
+        }
+
+        .speed-drag-zone:hover {
+            opacity: 1;
+            background: rgba(52, 152, 219, 0.25);
+            border-color: rgba(52, 152, 219, 0.5);
+            box-shadow: 0 0 1vmin rgba(52, 152, 219, 0.6);
+        }
+
+        .speed-point.active .speed-drag-zone {
+            background: rgba(0, 255, 0, 0.15);
+            border-color: rgba(0, 255, 0, 0.3);
+        }
+
+        .speed-point.active .speed-drag-zone:hover {
+            opacity: 1;
+            background: rgba(0, 255, 0, 0.25);
+            border-color: rgba(0, 255, 0, 0.5);
+            box-shadow: 0 0 1vmin rgba(0, 255, 0, 0.6);
+        }
+
         .speed-point::after {
             content: attr(data-label);
             position: absolute;
@@ -909,7 +946,7 @@
         }
 
         .speed-point-33::after {
-            right: 1.5vmin;
+            left: 1.5vmin;
         }
 
         .speed-point-stop::after {
@@ -917,7 +954,7 @@
         }
 
         .speed-point-45::after {
-            left: 1.5vmin;
+            right: 1.5vmin;
         }
 
         .speed-point:hover {
@@ -931,7 +968,7 @@
         }
 
         .speed-point-33 {
-            left: 0;
+            right: 0;
             top: 50%;
             transform: translateY(-50%);
         }
@@ -943,7 +980,7 @@
         }
 
         .speed-point-45 {
-            right: 0;
+            left: 0;
             top: 50%;
             transform: translateY(-50%);
         }
@@ -1344,6 +1381,40 @@
             pointer-events: auto;
             box-shadow: none;
             filter: drop-shadow(0.15vmin 0.15vmin 0.2vmin rgba(0, 0, 0, 0.6));
+        }
+
+        /* Zone de drag élargie et circulaire pour faciliter la sélection */
+        .tonearm-drag-zone {
+            position: absolute;
+            right: -0.5vmin;
+            top: 50%;
+            transform: translate(0%, -50%);
+            width: 5vmin;
+            height: 5vmin;
+            background: rgba(52, 152, 219, 0.15);
+            border: 0.2vmin solid rgba(52, 152, 219, 0.3);
+            border-radius: 50%;
+            cursor: grab;
+            pointer-events: auto;
+            transition: all 0.3s ease;
+            opacity: 0;
+        }
+
+        .tonearm-drag-zone:hover {
+            opacity: 1;
+            background: rgba(52, 152, 219, 0.25);
+            border-color: rgba(52, 152, 219, 0.5);
+            box-shadow: 0 0 1vmin rgba(52, 152, 219, 0.6);
+        }
+
+        .tonearm-container.dragging .tonearm-drag-zone {
+            opacity: 1;
+            background: rgba(231, 76, 60, 0.25);
+            border-color: rgba(231, 76, 60, 0.5);
+        }
+
+        .tonearm-drag-zone:active {
+            cursor: grabbing;
         }
 
         .tonearm-lift-hook:hover {
