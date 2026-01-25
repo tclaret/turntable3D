@@ -32,6 +32,50 @@
             font-family: Arial, sans-serif;
         }
 
+        /* Horror Comic Mode - Only for Direction button */
+        #direction-btn.active {
+            font-family: 'Impact', 'Courier New', cursive;
+            font-size: 20px !important;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 6px rgba(255, 0, 0, 0.8),
+                         0 0 10px rgba(255, 0, 0, 0.5);
+            background-color: #330000 !important;
+            color: #ff0000;
+            border: 2px solid #ff0000;
+            animation: pulse-horror 1.5s infinite;
+        }
+
+        @keyframes pulse-horror {
+            0%, 100% {
+                text-shadow: 2px 2px 6px rgba(255, 0, 0, 0.8),
+                             0 0 10px rgba(255, 0, 0, 0.5);
+            }
+            50% {
+                text-shadow: 2px 2px 8px rgba(255, 0, 0, 1),
+                             0 0 20px rgba(255, 0, 0, 0.8);
+            }
+        }
+
+        /* Subtle effects for 33 and 45 RPM buttons when active */
+        #set33-btn.active,
+        #set45-btn.active {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            box-shadow: 0 0 8px rgba(192, 57, 43, 0.6);
+            animation: pulse-speed 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-speed {
+            0%, 100% {
+                box-shadow: 0 0 8px rgba(192, 57, 43, 0.6);
+            }
+            50% {
+                box-shadow: 0 0 12px rgba(192, 57, 43, 0.9);
+            }
+        }
+
         .interface-controls {
             width: 100%;
             background-color: var(--color-control);
@@ -1268,6 +1312,61 @@
         }
 
         /* Levier de levée fixe sur le côté droit */
+        /* Arm lift control container with overlay */
+        .arm-lift-control-container {
+            position: absolute;
+            left: 50%;
+            top: 3%;
+            transform: translateX(-50%) translateX(37vmin) translateY(50vmin) translateZ(6vmin);
+            transform-style: preserve-3d;
+            z-index: 10;
+        }
+
+        .arm-lift-control-overlay {
+            position: absolute;
+            width: 12vmin;
+            height: 12vmin;
+            background: radial-gradient(circle, rgba(0, 200, 255, 0.3) 0%, rgba(0, 200, 255, 0.1) 50%, transparent 100%);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: -1;
+        }
+
+        .arm-lift-control-container.active .arm-lift-control-overlay {
+            opacity: 1;
+        }
+
+        .arm-lift-control-container .tonearm-lift-fixed {
+            position: relative;
+            left: auto;
+            top: auto;
+            transform: none;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .arm-lift-control-container .tonearm-lift-fixed:hover {
+            transform: scale(1.05);
+        }
+
+        .arm-lift-position-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 8px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            z-index: 10;
+        }
+
         .tonearm-lift-fixed {
             position: absolute;
             left: 50%;
@@ -1378,6 +1477,47 @@
             /* Cartouche supprimée */
         }
 
+        /* Debug crosshair on needle position */
+        .needle-crosshair {
+            position: absolute;
+            right: 0.8vmin;
+            bottom: -0.8vmin;
+            width: 3vmin;
+            height: 3vmin;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 100;
+            transform: translate(50%, 50%);
+        }
+
+        .scene.debug .needle-crosshair {
+            opacity: 1;
+        }
+
+        /* Horizontal line of crosshair */
+        .needle-crosshair::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 100%;
+            height: 2px;
+            background: yellow;
+            transform: translateY(-50%);
+        }
+
+        /* Vertical line of crosshair */
+        .needle-crosshair::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: yellow;
+            transform: translateX(-50%);
+        }
+
         /* Crochet - petit finger lift qui sort vers X+ (droite) */
         /* Crochet - Modified to be curved finger lift */
         .tonearm-lift-hook {
@@ -1401,6 +1541,13 @@
             box-shadow: none;
             filter: drop-shadow(0.15vmin 0.15vmin 0.2vmin rgba(0, 0, 0, 0.6));
         }
+        
+        /* Zone de hit invisible plus large pour mobile */
+        @media (max-width: 768px), (pointer: coarse) {
+            .tonearm-lift-hook {
+                padding: 2vmin;  /* Agrandit la zone cliquable sans changer l'apparence */
+            }
+        }
 
         /* Zone de drag élargie et circulaire pour faciliter la sélection */
         .tonearm-drag-zone {
@@ -1408,8 +1555,8 @@
             right: -0.5vmin;
             top: 50%;
             transform: translate(0%, -50%);
-            width: 5vmin;
-            height: 5vmin;
+            width: 8vmin;  /* Agrandie pour mobile */
+            height: 8vmin;
             background: rgba(52, 152, 219, 0.15);
             border: 0.2vmin solid rgba(52, 152, 219, 0.3);
             border-radius: 50%;
@@ -1757,6 +1904,112 @@
 
         .angle-marker-270 {
             transform: translate(-50%, -50%) rotate(270deg);
+        }
+
+        /* Vinyl dimension marker (Debug) */
+        .vinyl-marker {
+            position: absolute;
+            /* Le vinyl-record fait 90% du record-container (65vmin) = 58.5vmin */
+            width: 58.5vmin;
+            height: 58.5vmin;
+            border: 3px dashed rgba(0, 150, 255, 0.7);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            opacity: 0;
+            z-index: 6;
+            background: rgba(0, 150, 255, 0.03);
+        }
+
+        .scene.debug .vinyl-marker {
+            opacity: 1;
+        }
+
+        .vinyl-marker::before {
+            content: attr(data-info);
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 120, 200, 0.9);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+            border: 2px solid rgba(0, 150, 255, 1);
+        }
+
+        /* Label zone marker (Debug) */
+        .label-marker {
+            position: absolute;
+            /* Étiquette : 10cm sur un vinyle de 30cm = 33.33% du diamètre */
+            /* Le vinyl-record fait 90% du record-container (65vmin) = 58.5vmin */
+            /* L'étiquette fait donc 33.33% de 58.5vmin = 19.5vmin */
+            width: 19.5vmin;
+            height: 19.5vmin;
+            border: 3px dashed rgba(255, 165, 0, 0.8);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            opacity: 0;
+            z-index: 6;
+            background: rgba(255, 165, 0, 0.05);
+        }
+
+        .scene.debug .label-marker {
+            opacity: 1;
+        }
+
+        .label-marker::before {
+            content: attr(data-info);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 140, 0, 0.9);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+            border: 2px solid rgba(255, 165, 0, 1);
+        }
+
+        /* Arm movement arc marker (Debug) */
+        .arm-arc-marker {
+            position: absolute;
+            left: calc(50% + 30vmin);
+            top: calc(50% - 10vmin);
+            width: 60vmin;
+            height: 60vmin;
+            transform: translate(-50%, -50%) translateZ(7vmin);
+            pointer-events: none;
+            opacity: 0;
+            z-index: 45;
+        }
+
+        .scene.debug .arm-arc-marker {
+            opacity: 1;
+        }
+
+        .arm-arc-path {
+            fill: none;
+            stroke: rgba(255, 0, 255, 0.9);
+            stroke-width: 3;
+            stroke-dasharray: 5, 3;
+        }
+
+        .arm-arc-label {
+            fill: rgba(255, 0, 255, 0.9);
+            font-weight: bold;
+            font-family: Arial, sans-serif;
         }
 
         /* Message de démarrage */

@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Hauteurs Z (rotation X)
     const ARM_HEIGHT_REST = -8;
-    const ARM_HEIGHT_LIFTED = 12;
+    const ARM_HEIGHT_LIFTED = 5;  // Réduit pour rester visible
     const ARM_HEIGHT_PLAYING = 3;
 
     // ------------------------------------
@@ -78,6 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let animationFrameId = null;
     let armDragAngleOffset = 0;
     let armDampingFrame = null;
+    let lastArmDragAngle = null;
+    let lastArmDragTime = null;
     const ARM_DAMPING_FACTOR = 0.08; // Résistance: plus petit = plus de résistance
 
     // Audio & Scratch state
@@ -280,8 +282,11 @@ document.addEventListener('DOMContentLoaded', () => {
         armState = targetHeight === ARM_HEIGHT_REST ? 'rest' :
             targetHeight === ARM_HEIGHT_LIFTED ? 'lifted' : 'playing';
 
-        const zPosition = 7;
-        const transform = `translate(-50%, -50%) translateZ(${zPosition}vmin) rotateZ(${targetAngle}deg) rotateX(${targetHeight}deg)`;
+        // Adjust Z position when lifted to keep arm visible
+        const zPosition = targetHeight === ARM_HEIGHT_LIFTED ? 9 : 7;
+        // Add rotateY for visual lift effect when arm is lifted
+        const rotateY = targetHeight === ARM_HEIGHT_LIFTED ? 8 : 0;
+        const transform = `translate(-50%, -50%) translateZ(${zPosition}vmin) rotateZ(${targetAngle}deg) rotateX(${targetHeight}deg) rotateY(${rotateY}deg)`;
 
         // Optim: use direct style manipulation
         tonearmContainer.style.transform = transform;
@@ -461,6 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
         [set33Btn, setStopBtn, set45Btn].forEach(btn => btn.classList.remove('active'));
 
         let baseRotation = 0;
+        const wasRunning = isRunning;
         currentRPM = rpm;
 
         if (rpm === RPM_33 || rpm === RPM_45) {
@@ -480,7 +486,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 scratchRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
             }
 
-            if (!skipAnimation) {
+            // If already running, just change speed without animation
+            if (wasRunning && !skipAnimation) {
+                // Simply update the playback rate and animation
+                updateAudioPlaybackRate();
+                updateAnimationWithCurrentRotation();
+            } else if (!skipAnimation) {
                 if (startingMessage) {
                     startingMessage.classList.add('visible');
                     setTimeout(() => startingMessage.classList.remove('visible'), 400);
@@ -492,52 +503,77 @@ document.addEventListener('DOMContentLoaded', () => {
                     armDampingFrame = null;
                 }
                 
-                // Reset arm state completely
-                isDraggingArm = false;
-                armState = 'rest';
+                // Preserve current arm position if it's already on the record and playing
+                // More strict check: must be in 'playing' state AND position must be valid (not at rest)
+                const preserveArmPosition = armState === 'playing' && 
+                                           currentArmPosition !== null && 
+                                           currentArmPosition !== ARM_REST_Z_ANGLE &&
+                                           armCurrentZAngle !== ARM_REST_Z_ANGLE;
+                const targetStartAngle = preserveArmPosition ? currentArmPosition : ARM_START_Z_ANGLE;
+                
+                // Reset arm state completely if starting from rest
+                if (!preserveArmPosition) {
+                    isDraggingArm = false;
+                    armState = 'rest';
 
-                // Tonearm sequence
-                // 1. Sound
-                try {
-                    const source = audioContext.createBufferSource();
-                    source.buffer = createTonearmSound();
-                    const gainNode = audioContext.createGain();
-                    gainNode.gain.value = 0.3;
-                    source.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-                    source.start(0);
-                } catch (e) { }
+                    // Tonearm sequence from rest position
+                    // 1. Sound
+                    try {
+                        const source = audioContext.createBufferSource();
+                        source.buffer = createTonearmSound();
+                        const gainNode = audioContext.createGain();
+                        gainNode.gain.value = 0.3;
+                        source.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        source.start(0);
+                    } catch (e) { }
 
-                // 2. Initial Movement
-                setTimeout(() => {
-                    armCurrentZAngle = ARM_REST_Z_ANGLE;
-                    armTargetZAngle = ARM_REST_Z_ANGLE;
-                    armCurrentHeight = ARM_HEIGHT_LIFTED;
-                    armState = 'lifted';
-                    moveTonearmToPosition(ARM_REST_Z_ANGLE, ARM_HEIGHT_LIFTED);
-                }, 30);
-                setTimeout(() => {
-                    armCurrentZAngle = ARM_START_Z_ANGLE;
-                    armTargetZAngle = ARM_START_Z_ANGLE;
-                    armCurrentHeight = ARM_HEIGHT_LIFTED;
-                    moveTonearmToPosition(ARM_START_Z_ANGLE, ARM_HEIGHT_LIFTED);
-                }, 150);
-                setTimeout(() => {
-                    armCurrentHeight = ARM_HEIGHT_PLAYING;
+                    // 2. Initial Movement
+                    setTimeout(() => {
+                        armCurrentZAngle = ARM_REST_Z_ANGLE;
+                        armTargetZAngle = ARM_REST_Z_ANGLE;
+                        armCurrentHeight = ARM_HEIGHT_LIFTED;
+                        armState = 'lifted';
+                        moveTonearmToPosition(ARM_REST_Z_ANGLE, ARM_HEIGHT_LIFTED);
+                    }, 30);
+                    setTimeout(() => {
+                        armCurrentZAngle = ARM_START_Z_ANGLE;
+                        armTargetZAngle = ARM_START_Z_ANGLE;
+                        armCurrentHeight = ARM_HEIGHT_LIFTED;
+                        moveTonearmToPosition(ARM_START_Z_ANGLE, ARM_HEIGHT_LIFTED);
+                    }, 150);
+                    setTimeout(() => {
+                        armCurrentHeight = ARM_HEIGHT_PLAYING;
+                        armState = 'playing';
+                        moveTonearmToPosition(ARM_START_Z_ANGLE, ARM_HEIGHT_PLAYING);
+                    }, 300);
+
+                    // 3. Start Playback
+                    setTimeout(() => {
+                        armStartTime = 0;
+                        currentArmPosition = ARM_START_Z_ANGLE;
+                        armCurrentZAngle = ARM_START_Z_ANGLE;
+                        armTargetZAngle = ARM_START_Z_ANGLE;
+                        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                        animationFrameId = requestAnimationFrame(animateTonearm);
+                        startAudioPlayback(true); // Démarrer depuis la position du bras
+                    }, 450);
+                } else {
+                    // Arm is already positioned on the record, just start playing from current position
+                    isDraggingArm = false;
                     armState = 'playing';
-                    moveTonearmToPosition(ARM_START_Z_ANGLE, ARM_HEIGHT_PLAYING);
-                }, 300);
-
-                // 3. Start Playback
-                setTimeout(() => {
+                    armCurrentHeight = ARM_HEIGHT_PLAYING;
                     armStartTime = 0;
-                    currentArmPosition = ARM_START_Z_ANGLE;
-                    armCurrentZAngle = ARM_START_Z_ANGLE;
-                    armTargetZAngle = ARM_START_Z_ANGLE;
+                    
+                    // Set target to current position to prevent movement
+                    armTargetZAngle = armCurrentZAngle;
+                    currentArmPosition = armCurrentZAngle;
+                    
+                    moveTonearmToPosition(armCurrentZAngle, ARM_HEIGHT_PLAYING);
                     if (animationFrameId) cancelAnimationFrame(animationFrameId);
                     animationFrameId = requestAnimationFrame(animateTonearm);
                     startAudioPlayback(true); // Démarrer depuis la position du bras
-                }, 450);
+                }
             } else {
                 if (tonePlayer && tonePlayer.state === 'started') tonePlayer.stop();
             }
@@ -614,7 +650,8 @@ document.addEventListener('DOMContentLoaded', () => {
         button.classList.add('active');
 
         // Only update animation for play modes, not for stop (uses CSS transition)
-        if (rpm === RPM_33 || rpm === RPM_45) {
+        // Skip if already handled above (when changing speed while running)
+        if ((rpm === RPM_33 || rpm === RPM_45) && (!wasRunning || skipAnimation)) {
             updateAnimationWithCurrentRotation();
         }
     }
@@ -717,9 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentArmZAngle = ARM_RUNOUT_GROOVE_ANGLE;
                 currentArmPosition = ARM_RUNOUT_GROOVE_ANGLE;
                 armCurrentZAngle = ARM_RUNOUT_GROOVE_ANGLE;
-                tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(7vmin) rotateZ(${ARM_RUNOUT_GROOVE_ANGLE}deg) rotateX(${ARM_HEIGHT_PLAYING}deg)`;
-                tonearmContainer.style.visibility = 'visible';
-                tonearmContainer.style.opacity = '1';
+                moveTonearmToPosition(ARM_RUNOUT_GROOVE_ANGLE, ARM_HEIGHT_PLAYING);
                 // Couper l'audio dans le run-out groove
                 if (tonePlayer && tonePlayer.state === 'started') {
                     tonePlayer.stop();
@@ -747,12 +782,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(7vmin) rotateZ(${currentArmZAngle}deg) rotateX(${ARM_HEIGHT_PLAYING}deg)`;
+            moveTonearmToPosition(currentArmZAngle, ARM_HEIGHT_PLAYING);
             animationFrameId = requestAnimationFrame(animateTonearm);
         } else {
             // Audio terminé, bras au dernier sillon
             armCurrentZAngle = ARM_RUNOUT_GROOVE_ANGLE;
-            tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(7vmin) rotateZ(${ARM_RUNOUT_GROOVE_ANGLE}deg) rotateX(${ARM_HEIGHT_PLAYING}deg)`;
+            moveTonearmToPosition(ARM_RUNOUT_GROOVE_ANGLE, ARM_HEIGHT_PLAYING);
             if (tonePlayer && tonePlayer.state === 'started') {
                 tonePlayer.stop();
             }
@@ -783,6 +818,10 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             e.stopPropagation();
             isDraggingArm = true;
+            
+            // Initialize scratch tracking
+            lastArmDragAngle = armCurrentZAngle;
+            lastArmDragTime = performance.now();
 
             // MUTE AUDIO ON LIFT
             if (tonePlayer && tonePlayer.state === 'started') {
@@ -826,11 +865,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const mouseAngle = mouseToArmAngle(clientX, clientY);
         let newAngle = mouseAngle + armDragAngleOffset;
 
-        // --- NEW CONSTRAINT IMPLEMENTATION ---
-        // User requested strict 45 degree limit. 
-        // We use ARM_MIN_DRAG_ANGLE (-100) to ARM_MAX_DRAG_ANGLE (-45).
-        newAngle = Math.max(ARM_MIN_DRAG_ANGLE, Math.min(ARM_MAX_DRAG_ANGLE, newAngle));
-        // -------------------------------------
+        // --- PLAYBACK ARC CONSTRAINT ---
+        // The arm must stay within the playback arc (from -5° to 70°)
+        // This represents the actual playable area on the vinyl
+        const ARC_START_ANGLE = ARM_START_Z_ANGLE + 75; // -5°
+        const ARC_END_ANGLE = ARM_RUNOUT_GROOVE_ANGLE;  // 70°
+        newAngle = Math.max(ARC_START_ANGLE, Math.min(ARC_END_ANGLE, newAngle));
+        // -------------------------------
 
         // Set target angle instead of direct angle for damping effect
         armTargetZAngle = newAngle;
@@ -847,11 +888,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function animateArmDamping() {
         if (!isDraggingArm) {
             armDampingFrame = null;
+            lastArmDragAngle = null;
+            lastArmDragTime = null;
             return;
         }
 
+        const now = performance.now();
+
         // Apply damping: smooth interpolation towards target
         const delta = armTargetZAngle - armCurrentZAngle;
+        const oldAngle = armCurrentZAngle;
         armCurrentZAngle += delta * ARM_DAMPING_FACTOR;
 
         // Stop if very close to target
@@ -860,6 +906,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
+
+        // Update audio position based on arm movement (scratch effect)
+        if (audioScratcher.isInitialized && isRunning) {
+            const audioTime = getAudioPositionFromArmAngle(armCurrentZAngle);
+            
+            // Calculate velocity based on angle change
+            let velocity = 0;
+            if (lastArmDragAngle !== null && lastArmDragTime !== null) {
+                const timeDelta = (now - lastArmDragTime) / 1000; // seconds
+                if (timeDelta > 0) {
+                    const angleDelta = armCurrentZAngle - lastArmDragAngle;
+                    // Convert angle velocity to normalized velocity
+                    // Higher angle change = higher velocity
+                    velocity = (angleDelta / timeDelta) / 50; // Normalize factor
+                    velocity = Math.max(-2, Math.min(2, velocity)); // Clamp
+                }
+            }
+            
+            lastArmDragAngle = armCurrentZAngle;
+            lastArmDragTime = now;
+            
+            audioScratcher.updatePosition(audioTime, velocity);
+        }
 
         // Continue animation
         armDampingFrame = requestAnimationFrame(animateArmDamping);
@@ -1083,6 +1152,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Arm lift control toggle
+    const armLiftLever = document.getElementById('arm-lift-lever');
+    const armLiftContainer = document.querySelector('.arm-lift-control-container');
+    const armLiftLabel = document.querySelector('.arm-lift-position-label');
+    
+    if (armLiftLever && armLiftContainer) {
+        armLiftLever.addEventListener('click', () => {
+            // Toggle arm lift state
+            isArmLifted = !isArmLifted;
+            
+            // Visual feedback
+            armLiftContainer.classList.add('active');
+            setTimeout(() => armLiftContainer.classList.remove('active'), 500);
+            
+            // Update label
+            if (armLiftLabel) {
+                armLiftLabel.textContent = isArmLifted ? 'DOWN' : 'UP';
+            }
+            
+            // Move arm to lifted or playing position
+            if (isArmLifted) {
+                armCurrentHeight = ARM_HEIGHT_LIFTED;
+                moveTonearmToPosition(armCurrentZAngle, ARM_HEIGHT_LIFTED);
+            } else {
+                armCurrentHeight = ARM_HEIGHT_PLAYING;
+                moveTonearmToPosition(armCurrentZAngle, ARM_HEIGHT_PLAYING);
+            }
+        });
+    }
+
     // Pitch control overlay on interaction
     const pitchControlContainer = document.querySelector('.pitch-control-container');
     const pitchControlBase = document.querySelector('.pitch-control-base');
@@ -1202,6 +1301,88 @@ document.addEventListener('DOMContentLoaded', () => {
     // INITIALIZATION KICK-OFF
     // ------------------------------------
     setSpeedAndKnob(0, setStopBtn, true); // Initialize stopped
+
+    // Draw arm movement arc in debug mode
+    function drawArmArc() {
+        const arcPath = document.querySelector('.arm-arc-path');
+        const markersGroup = document.querySelector('.arc-angle-markers');
+        if (!arcPath) return;
+
+        // Arc showing the path of the tonearm head (needle at the end of the arm)
+        // The SVG is now positioned at the pivot location (fixed, doesn't rotate with arm)
+        // Center of the arc is at the center of the SVG viewBox
+        const centerX = 100;
+        const centerY = 100;
+        
+        // Arm length is 28vmin, but reduced slightly for visual clarity
+        // The SVG is 60vmin, so in the viewBox (200x200):
+        // 26vmin / 60vmin * 200 = 86.67 units
+        const radius = 87; // Slightly reduced from 93
+        
+        // Arc should start at current needle position and end at run-out groove
+        // Adjust to match the yellow crosshair position more precisely
+        const adjustedStartAngle = ARM_START_Z_ANGLE + 75; // ~-5° - fine-tuned to align with crosshair
+        const startAngle = (adjustedStartAngle + 90) * Math.PI / 180;
+        const endAngle = (ARM_RUNOUT_GROOVE_ANGLE + 90) * Math.PI / 180;
+        
+        const startX = centerX + radius * Math.cos(startAngle);
+        const startY = centerY + radius * Math.sin(startAngle);
+        const endX = centerX + radius * Math.cos(endAngle);
+        const endY = centerY + radius * Math.sin(endAngle);
+        
+        // Large arc flag: 1 if arc should be > 180°
+        // Sweep flag: 1 for clockwise (mirror view)
+        const largeArcFlag = (endAngle - startAngle) > Math.PI ? 1 : 0;
+        
+        const pathData = `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
+        arcPath.setAttribute('d', pathData);
+        
+        // Draw angle markers
+        if (markersGroup) {
+            markersGroup.innerHTML = '';
+            
+            // Draw markers every 15°
+            const angleStep = 15;
+            for (let angle = adjustedStartAngle; angle <= ARM_RUNOUT_GROOVE_ANGLE; angle += angleStep) {
+                const radians = (angle + 90) * Math.PI / 180;
+                
+                // Outer point (on arc)
+                const outerX = centerX + radius * Math.cos(radians);
+                const outerY = centerY + radius * Math.sin(radians);
+                
+                // Inner point (almost to center - very long tick mark)
+                const innerX = centerX + 5 * Math.cos(radians); // Just 5 units from center
+                const innerY = centerY + 5 * Math.sin(radians);
+                
+                // Text position (outside the arc)
+                const textX = centerX + (radius + 10) * Math.cos(radians);
+                const textY = centerY + (radius + 10) * Math.sin(radians);
+                
+                // Create tick line (from arc towards center)
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', outerX);
+                line.setAttribute('y1', outerY);
+                line.setAttribute('x2', innerX);
+                line.setAttribute('y2', innerY);
+                line.setAttribute('stroke', 'rgba(255, 0, 255, 0.6)');
+                line.setAttribute('stroke-width', '1');
+                markersGroup.appendChild(line);
+                
+                // Create angle text
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', textX);
+                text.setAttribute('y', textY);
+                text.setAttribute('font-size', '6');
+                text.setAttribute('fill', 'rgba(255, 0, 255, 0.8)');
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'middle');
+                text.textContent = `${angle}°`;
+                markersGroup.appendChild(text);
+            }
+        }
+    }
+
+    drawArmArc();
 
     // Preload
     audioScratcher.loadFromAudioElement();
