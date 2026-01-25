@@ -40,9 +40,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Interpretation: The range of motion manually draggable should be limited.
     // Let's implement clamp values.
     const ARM_MIN_DRAG_ANGLE = -100; // Un peu avant le repos
-    const ARM_MAX_DRAG_ANGLE = 135;  // Limité au centre du disque (étiquette)
+    const ARM_MAX_DRAG_ANGLE = 70;   // Limité au dernier sillon (run-out groove)
 
     const ARM_TOTAL_PLAY_DURATION_SECONDS = 720; // 12 minutes
+
+    // Vinyl zones (based on arm angle)
+    // Étiquette centrale : 10cm diamètre (5cm rayon) - pas de sillons
+    // Trou central : 0.8cm diamètre
+    // Dernier sillon : ~1cm du bord de l'étiquette = rayon 6cm
+    const ARM_LABEL_START_ANGLE = 75;    // Début de l'étiquette (zone sans sillon)
+    const ARM_LABEL_END_ANGLE = 135;      // Fin de l'étiquette (centre)
+    const ARM_RUNOUT_GROOVE_ANGLE = 70;   // Dernier sillon (run-out groove)
+    const ARM_VINYL_START_ANGLE = -80;    // Début du vinyle
 
     // Hauteurs Z (rotation X)
     const ARM_HEIGHT_REST = -8;
@@ -62,11 +71,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let armState = 'rest'; // 'rest', 'lifted', 'playing'
     let isDraggingArm = false;
     let armCurrentZAngle = ARM_REST_Z_ANGLE;
+    let armTargetZAngle = ARM_REST_Z_ANGLE; // Target angle for damped movement
     let armCurrentHeight = ARM_HEIGHT_REST;
     let isArmLifted = false;
     let armStartTime = 0;
     let animationFrameId = null;
     let armDragAngleOffset = 0;
+    let armDampingFrame = null;
+    const ARM_DAMPING_FACTOR = 0.08; // Résistance: plus petit = plus de résistance
 
     // Audio & Scratch state
     const audioElement = new Audio('VanillaHaters.opus');
@@ -273,6 +285,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Optim: use direct style manipulation
         tonearmContainer.style.transform = transform;
+        tonearmContainer.style.visibility = 'visible';
+        tonearmContainer.style.opacity = '1';
 
         // Shadow update
         if (targetHeight === ARM_HEIGHT_LIFTED) {
@@ -285,6 +299,44 @@ document.addEventListener('DOMContentLoaded', () => {
     function isArmOverVinyl(angle) {
         // Broad check for dropping logic (unchanged)
         return angle >= -75 && angle <= 145;
+    }
+
+    function getVinylZone(angle) {
+        // Retourne la zone du vinyle selon l'angle du bras
+        if (angle >= ARM_LABEL_START_ANGLE) {
+            return 'label'; // Zone d'étiquette (pas de sillon)
+        } else if (angle >= ARM_RUNOUT_GROOVE_ANGLE) {
+            return 'runout'; // Run-out groove (boucle infinie)
+        } else if (angle >= ARM_VINYL_START_ANGLE) {
+            return 'playing'; // Zone de lecture normale
+        } else {
+            return 'off'; // Hors du disque
+        }
+    }
+
+    function getAudioPositionFromArmAngle(angle) {
+        // Convertit l'angle du bras en position audio (en secondes)
+        // Bras au début (-80°) = 0s, Bras au dernier sillon (85°) = durée totale
+        if (!audioScratcher.isInitialized || !audioScratcher.duration) {
+            return 0;
+        }
+
+        const totalAngleRange = ARM_RUNOUT_GROOVE_ANGLE - ARM_START_Z_ANGLE; // 85 - (-80) = 165°
+        const currentAngleOffset = angle - ARM_START_Z_ANGLE; // Position relative
+        const progress = Math.max(0, Math.min(1, currentAngleOffset / totalAngleRange));
+
+        return progress * audioScratcher.duration;
+    }
+
+    function getArmAngleFromAudioPosition(audioTime) {
+        // Convertit la position audio en angle du bras
+        if (!audioScratcher.isInitialized || !audioScratcher.duration) {
+            return ARM_START_Z_ANGLE;
+        }
+
+        const progress = audioTime / audioScratcher.duration;
+        const totalAngleRange = ARM_RUNOUT_GROOVE_ANGLE - ARM_START_Z_ANGLE;
+        return ARM_START_Z_ANGLE + (progress * totalAngleRange);
     }
 
     // ------------------------------------
@@ -307,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update Pitch Knob UI
         const minTop = 90;
         const maxTop = 10;
-        const topPosition = maxTop + (minTop - maxTop) * (1.5 - pitchFactor); // Simplified 1.5 - pitch / 1.0
+        const topPosition = maxTop + (minTop - maxTop) * (1.5 - pitchFactor);
         pitchKnob.style.top = `${topPosition}%`;
 
         updateAudioPlaybackRate();
@@ -373,22 +425,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function startAudioPlayback() {
+    function startAudioPlayback(startFromArmPosition = false) {
         if (tonePlayer && tonePlayer.state === 'started') tonePlayer.stop();
 
         if (!audioScratcher.isInitialized) {
             audioScratcher.loadFromAudioElement().then(() => {
                 if (tonePlayer) {
-                    tonePlayer.start();
+                    let startPos = 0;
+                    if (startFromArmPosition && currentArmPosition !== null) {
+                        startPos = getAudioPositionFromArmAngle(currentArmPosition);
+                    }
+                    tonePlayer.start('+0', startPos);
+                    audioScratcher.setPosition(startPos);
                     updateAudioPlaybackRate();
                 }
             });
         } else if (tonePlayer && tonePlayer.buffer) {
-            let currentPos = audioScratcher.isInitialized ? audioScratcher.getPosition() : 0;
+            let currentPos;
+            if (startFromArmPosition && currentArmPosition !== null) {
+                // Démarrer à la position correspondant à l'angle du bras
+                currentPos = getAudioPositionFromArmAngle(currentArmPosition);
+            } else {
+                currentPos = audioScratcher.isInitialized ? audioScratcher.getPosition() : 0;
+            }
             const duration = tonePlayer.buffer.duration;
             currentPos = Math.max(0, Math.min(currentPos, duration - 0.1));
 
             tonePlayer.start('+0', currentPos);
+            audioScratcher.setPosition(currentPos);
             updateAudioPlaybackRate();
         }
     }
@@ -402,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (rpm === RPM_33 || rpm === RPM_45) {
             currentSpeedDuration = getAnimationDuration(rpm);
             isRunning = true;
-            baseRotation = (rpm === RPM_33) ? -20 : 40;
+            baseRotation = (rpm === RPM_33) ? 22 : -20;
 
             if (scratchAnimationFrame) {
                 cancelAnimationFrame(scratchAnimationFrame);
@@ -422,6 +486,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     setTimeout(() => startingMessage.classList.remove('visible'), 400);
                 }
 
+                // Cancel any potential arm damping animation
+                if (armDampingFrame) {
+                    cancelAnimationFrame(armDampingFrame);
+                    armDampingFrame = null;
+                }
+                
+                // Reset arm state completely
+                isDraggingArm = false;
+                armState = 'rest';
+
                 // Tonearm sequence
                 // 1. Sound
                 try {
@@ -435,16 +509,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (e) { }
 
                 // 2. Initial Movement
-                setTimeout(() => moveTonearmToPosition(ARM_REST_Z_ANGLE, ARM_HEIGHT_LIFTED), 30);
-                setTimeout(() => moveTonearmToPosition(ARM_START_Z_ANGLE, ARM_HEIGHT_LIFTED), 150);
-                setTimeout(() => moveTonearmToPosition(ARM_START_Z_ANGLE, ARM_HEIGHT_PLAYING), 300);
+                setTimeout(() => {
+                    armCurrentZAngle = ARM_REST_Z_ANGLE;
+                    armTargetZAngle = ARM_REST_Z_ANGLE;
+                    armCurrentHeight = ARM_HEIGHT_LIFTED;
+                    armState = 'lifted';
+                    moveTonearmToPosition(ARM_REST_Z_ANGLE, ARM_HEIGHT_LIFTED);
+                }, 30);
+                setTimeout(() => {
+                    armCurrentZAngle = ARM_START_Z_ANGLE;
+                    armTargetZAngle = ARM_START_Z_ANGLE;
+                    armCurrentHeight = ARM_HEIGHT_LIFTED;
+                    moveTonearmToPosition(ARM_START_Z_ANGLE, ARM_HEIGHT_LIFTED);
+                }, 150);
+                setTimeout(() => {
+                    armCurrentHeight = ARM_HEIGHT_PLAYING;
+                    armState = 'playing';
+                    moveTonearmToPosition(ARM_START_Z_ANGLE, ARM_HEIGHT_PLAYING);
+                }, 300);
 
                 // 3. Start Playback
                 setTimeout(() => {
                     armStartTime = 0;
+                    currentArmPosition = ARM_START_Z_ANGLE;
+                    armCurrentZAngle = ARM_START_Z_ANGLE;
+                    armTargetZAngle = ARM_START_Z_ANGLE;
                     if (animationFrameId) cancelAnimationFrame(animationFrameId);
                     animationFrameId = requestAnimationFrame(animateTonearm);
-                    startAudioPlayback();
+                    startAudioPlayback(true); // Démarrer depuis la position du bras
                 }, 450);
             } else {
                 if (tonePlayer && tonePlayer.state === 'started') tonePlayer.stop();
@@ -455,21 +547,48 @@ document.addEventListener('DOMContentLoaded', () => {
             isRunning = false;
             baseRotation = 0;
 
+            // Cancel any running scratch animation
+            if (scratchAnimationFrame) {
+                cancelAnimationFrame(scratchAnimationFrame);
+                scratchAnimationFrame = null;
+            }
+
+            // Capture current rotation
             const transform = window.getComputedStyle(vinyl).transform;
             if (transform && transform !== 'none') {
                 const matrix = new DOMMatrix(transform);
                 scratchRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
             }
 
+            // Stop animation
             vinyl.style.animation = 'none';
-            vinyl.style.transform = `translate(-50%, -50%) rotateZ(${scratchRotation}deg)`;
+            vinyl.style.willChange = 'auto';
+            
+            // Calculate target rotation: continue in the same direction to next clean position
+            const normalizedRotation = ((scratchRotation % 360) + 360) % 360;
+            let targetRotation;
+            
+            if (isReversed) {
+                // Going backwards: round down to previous 0° position
+                targetRotation = Math.floor(scratchRotation / 360) * 360;
+            } else {
+                // Going forward: round up to next 0° position
+                targetRotation = Math.ceil(scratchRotation / 360) * 360;
+            }
+            
+            // Apply smooth deceleration with CSS transition (simulate vinyl inertia)
+            // Force a reflow to ensure transition applies
+            void vinyl.offsetWidth;
+            vinyl.style.transition = 'transform 6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            vinyl.style.transform = `translate(-50%, -50%) rotateZ(${targetRotation}deg)`;
+            
+            // Update internal state after transition
+            setTimeout(() => {
+                scratchRotation = targetRotation;
+                scratchVelocity = 0;
+                vinyl.style.transition = '';
+            }, 6000);
 
-            // Physics start for stop
-            const pitchFactor = parseFloat(pitchSlider.value);
-            const rotationSpeed = (360 / getAnimationDuration(currentRPM || RPM_33)) / 60;
-            scratchVelocity = rotationSpeed * pitchFactor * (isReversed ? -1 : 1);
-
-            if (!scratchAnimationFrame) scratchAnimationFrame = requestAnimationFrame(applyScratch);
             if (tonePlayer && tonePlayer.state === 'started') tonePlayer.stop();
 
             currentArmPosition = null;
@@ -494,10 +613,9 @@ document.addEventListener('DOMContentLoaded', () => {
         selectorBase.style.transform = `rotateZ(${baseRotation}deg)`;
         button.classList.add('active');
 
+        // Only update animation for play modes, not for stop (uses CSS transition)
         if (rpm === RPM_33 || rpm === RPM_45) {
             updateAnimationWithCurrentRotation();
-        } else {
-            updateAnimation();
         }
     }
 
@@ -586,15 +704,58 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!armStartTime) armStartTime = timestamp;
         const elapsedTime = (timestamp - armStartTime) / 1000;
 
-        if (elapsedTime < ARM_TOTAL_PLAY_DURATION_SECONDS) {
-            const progress = elapsedTime / ARM_TOTAL_PLAY_DURATION_SECONDS;
-            const currentArmZAngle = ARM_START_Z_ANGLE + (ARM_END_Z_ANGLE - ARM_START_Z_ANGLE) * progress;
+        // Utiliser la durée audio réelle au lieu d'une durée fixe
+        const audioDuration = audioScratcher.isInitialized ? audioScratcher.duration : ARM_TOTAL_PLAY_DURATION_SECONDS;
+        const totalAngleRange = ARM_RUNOUT_GROOVE_ANGLE - ARM_START_Z_ANGLE;
+
+        if (elapsedTime < audioDuration) {
+            const progress = elapsedTime / audioDuration;
+            let currentArmZAngle = ARM_START_Z_ANGLE + totalAngleRange * progress;
+            
+            // Limiter strictement le bras au run-out groove
+            if (currentArmZAngle >= ARM_RUNOUT_GROOVE_ANGLE) {
+                currentArmZAngle = ARM_RUNOUT_GROOVE_ANGLE;
+                currentArmPosition = ARM_RUNOUT_GROOVE_ANGLE;
+                armCurrentZAngle = ARM_RUNOUT_GROOVE_ANGLE;
+                tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(7vmin) rotateZ(${ARM_RUNOUT_GROOVE_ANGLE}deg) rotateX(${ARM_HEIGHT_PLAYING}deg)`;
+                tonearmContainer.style.visibility = 'visible';
+                tonearmContainer.style.opacity = '1';
+                // Couper l'audio dans le run-out groove
+                if (tonePlayer && tonePlayer.state === 'started') {
+                    tonePlayer.stop();
+                }
+                // Le bras reste en place, ne pas continuer l'animation
+                return;
+            }
+            
             currentArmPosition = currentArmZAngle;
+            armCurrentZAngle = currentArmZAngle; // Update current angle for consistency
+
+            // Vérifier la zone du vinyle
+            const zone = getVinylZone(currentArmZAngle);
+
+            // Gérer l'audio selon la zone
+            if (zone === 'label' || zone === 'off') {
+                // Pas de son dans l'étiquette ou hors disque
+                if (tonePlayer && tonePlayer.state === 'started') {
+                    tonePlayer.stop();
+                }
+            } else if (zone === 'playing') {
+                // Zone de lecture normale - s'assurer que l'audio joue
+                if (isRunning && tonePlayer && tonePlayer.state !== 'started' && audioScratcher.isInitialized) {
+                    startAudioPlayback();
+                }
+            }
 
             tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(7vmin) rotateZ(${currentArmZAngle}deg) rotateX(${ARM_HEIGHT_PLAYING}deg)`;
             animationFrameId = requestAnimationFrame(animateTonearm);
         } else {
-            tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(7vmin) rotateZ(${ARM_END_Z_ANGLE}deg) rotateX(${ARM_HEIGHT_PLAYING}deg)`;
+            // Audio terminé, bras au dernier sillon
+            armCurrentZAngle = ARM_RUNOUT_GROOVE_ANGLE;
+            tonearmContainer.style.transform = `translate(-50%, -50%) translateZ(7vmin) rotateZ(${ARM_RUNOUT_GROOVE_ANGLE}deg) rotateX(${ARM_HEIGHT_PLAYING}deg)`;
+            if (tonePlayer && tonePlayer.state === 'started') {
+                tonePlayer.stop();
+            }
             cancelAnimationFrame(animationFrameId);
             animationFrameId = null;
         }
@@ -671,11 +832,38 @@ document.addEventListener('DOMContentLoaded', () => {
         newAngle = Math.max(ARM_MIN_DRAG_ANGLE, Math.min(ARM_MAX_DRAG_ANGLE, newAngle));
         // -------------------------------------
 
-        armCurrentZAngle = newAngle;
-        moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
+        // Set target angle instead of direct angle for damping effect
+        armTargetZAngle = newAngle;
+
+        // Start damping animation if not already running
+        if (!armDampingFrame) {
+            armDampingFrame = requestAnimationFrame(animateArmDamping);
+        }
 
         if (e.cancelable) e.preventDefault();
     };
+
+    // Animation loop for arm damping (resistance)
+    function animateArmDamping() {
+        if (!isDraggingArm) {
+            armDampingFrame = null;
+            return;
+        }
+
+        // Apply damping: smooth interpolation towards target
+        const delta = armTargetZAngle - armCurrentZAngle;
+        armCurrentZAngle += delta * ARM_DAMPING_FACTOR;
+
+        // Stop if very close to target
+        if (Math.abs(delta) < 0.1) {
+            armCurrentZAngle = armTargetZAngle;
+        }
+
+        moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
+
+        // Continue animation
+        armDampingFrame = requestAnimationFrame(animateArmDamping);
+    }
 
     document.addEventListener('mousemove', handleMove);
     document.addEventListener('touchmove', handleMove, { passive: false });
@@ -685,6 +873,16 @@ document.addEventListener('DOMContentLoaded', () => {
         isDraggingArm = false;
         tonearmContainer.classList.remove('dragging');
 
+        // Stop damping animation and lock position
+        if (armDampingFrame) {
+            cancelAnimationFrame(armDampingFrame);
+            armDampingFrame = null;
+        }
+        
+        // Ensure current angle matches target (stop any residual movement)
+        armCurrentZAngle = armTargetZAngle;
+        moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
+
         // Drop Logic
         if (isArmOverVinyl(armCurrentZAngle)) {
             // Drop on record
@@ -692,48 +890,70 @@ document.addEventListener('DOMContentLoaded', () => {
             armCurrentHeight = ARM_HEIGHT_PLAYING;
             moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
 
-            // Auto-start if needed
-            if (!isRunning || currentRPM !== RPM_33) {
+            // Vérifier la zone où le bras est déposé
+            const dropZone = getVinylZone(armCurrentZAngle);
+
+            // Auto-start at 33 RPM when needle drops
+            if (!isRunning) {
                 setSpeedAndKnob(RPM_33, set33Btn);
-            } else {
-                // Resume audio if already running (was muted on lift)
-                console.log('🎵 Needle drop - Resuming audio');
-                startAudioPlayback();
+            } else if (dropZone === 'playing') {
+                // Resume audio at position corresponding to arm angle
+                console.log('🎵 Needle drop - Starting audio at arm position');
+                startAudioPlayback(true);
             }
 
-            // Animate to center from dropped position
-            const totalAngleRange = ARM_END_Z_ANGLE - ARM_START_Z_ANGLE;
-            const remainingAngleRange = ARM_END_Z_ANGLE - armCurrentZAngle;
+            // Arrêter l'audio si déposé dans zone sans sillon
+            if (dropZone === 'label' || dropZone === 'runout' || dropZone === 'off') {
+                if (tonePlayer && tonePlayer.state === 'started') {
+                    tonePlayer.stop();
+                }
+            }
+
+            // Animate from dropped position to run-out groove
+            const totalAngleRange = ARM_RUNOUT_GROOVE_ANGLE - ARM_START_Z_ANGLE;
+            const remainingAngleRange = ARM_RUNOUT_GROOVE_ANGLE - armCurrentZAngle;
             const progressRatio = remainingAngleRange / totalAngleRange;
 
-            if (progressRatio > 0.05) {
+            if (progressRatio > 0.01) {
                 armStartTime = 0;
                 currentArmPosition = armCurrentZAngle;
 
-                // We define this inline to capture scope variables easily, or careful state management
+                // Calculate remaining audio duration
+                const audioDuration = audioScratcher.isInitialized ? audioScratcher.duration : ARM_TOTAL_PLAY_DURATION_SECONDS;
+                const currentAudioPos = getAudioPositionFromArmAngle(armCurrentZAngle);
+                const remainingAudioDuration = audioDuration - currentAudioPos;
+
+                // Animation from current position
                 const animateFromCurrent = (timestamp) => {
                     if (!armStartTime) armStartTime = timestamp;
                     const elapsedTime = (timestamp - armStartTime) / 1000;
-                    const remainingDuration = ARM_TOTAL_PLAY_DURATION_SECONDS * progressRatio;
 
-                    if (elapsedTime < remainingDuration) {
-                        const progress = elapsedTime / remainingDuration;
-                        armCurrentZAngle = currentArmPosition + (ARM_END_Z_ANGLE - currentArmPosition) * progress;
+                    if (elapsedTime < remainingAudioDuration) {
+                        const progress = elapsedTime / remainingAudioDuration;
+                        armCurrentZAngle = currentArmPosition + (ARM_RUNOUT_GROOVE_ANGLE - currentArmPosition) * progress;
                         moveTonearmToPosition(armCurrentZAngle, ARM_HEIGHT_PLAYING);
                         animationFrameId = requestAnimationFrame(animateFromCurrent);
                     } else {
-                        moveTonearmToPosition(ARM_END_Z_ANGLE, ARM_HEIGHT_PLAYING);
+                        moveTonearmToPosition(ARM_RUNOUT_GROOVE_ANGLE, ARM_HEIGHT_PLAYING);
+                        if (tonePlayer && tonePlayer.state === 'started') {
+                            tonePlayer.stop();
+                        }
                     }
                 };
                 animationFrameId = requestAnimationFrame(animateFromCurrent);
             }
 
         } else {
-            // Return to rest
+            // Return to rest - trigger STOP state
             isArmLifted = false;
             armCurrentZAngle = ARM_REST_Z_ANGLE;
             armCurrentHeight = ARM_HEIGHT_REST;
             moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
+            
+            // Stop the turntable when arm returns to rest
+            if (isRunning) {
+                setSpeedAndKnob(0, setStopBtn);
+            }
         }
     };
 
@@ -862,6 +1082,28 @@ document.addEventListener('DOMContentLoaded', () => {
             updateAudioPlaybackRate();
         }
     });
+
+    // Pitch control overlay on interaction
+    const pitchControlContainer = document.querySelector('.pitch-control-container');
+    const pitchControlBase = document.querySelector('.pitch-control-base');
+
+    if (pitchControlBase) {
+        pitchControlBase.addEventListener('mousedown', () => {
+            pitchControlContainer?.classList.add('active');
+        });
+
+        pitchControlBase.addEventListener('touchstart', () => {
+            pitchControlContainer?.classList.add('active');
+        });
+
+        document.addEventListener('mouseup', () => {
+            pitchControlContainer?.classList.remove('active');
+        });
+
+        document.addEventListener('touchend', () => {
+            pitchControlContainer?.classList.remove('active');
+        });
+    }
 
     // Direction Toggle
     directionBtn.addEventListener('click', () => {

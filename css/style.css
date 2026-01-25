@@ -1047,19 +1047,38 @@
             position: absolute;
             left: 50%;
             top: 1%;
-            transform: translateX(-50%) translateX(34vmin) translateY(40vmin) translateZ(5vmin);
+            transform: translateX(-50%) translateX(28vmin) translateY(50vmin) translateZ(5vmin) rotateZ(90deg);
             transform-style: preserve-3d;
             z-index: 10;
         }
 
         .pitch-control-base {
             width: 2vmin;
-            height: 18vmin;
+            height: 12vmin;
             background-color: #333;
             border-radius: 1vmin;
             position: relative;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5) inset, 0 0 20px 5px rgba(255, 0, 0, 0.8);
             border: 0.3vmin solid #555;
+        }
+
+        .pitch-control-overlay {
+            position: absolute;
+            width: 15vmin;
+            height: 15vmin;
+            background: radial-gradient(circle, rgba(192, 57, 43, 0.3) 0%, rgba(192, 57, 43, 0.1) 50%, transparent 100%);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: -1;
+        }
+
+        .pitch-control-container.active .pitch-control-overlay {
+            opacity: 1;
         }
 
         .pitch-control-knob {
@@ -1897,7 +1916,11 @@
             }
 
             .pitch-control-container {
-                transform: translateX(-50%) translateX(34vmin) translateY(60vmin) translateZ(5vmin);
+                transform: translateX(-50%) translateX(28vmin) translateY(68vmin) translateZ(5vmin) rotateZ(90deg);
+            }
+
+            .pitch-control-base {
+                height: 15vmin;
             }
 
             .scene {
@@ -1937,7 +1960,11 @@
             }
 
             .pitch-control-container {
-                transform: translateX(-50%) translateX(34vmin) translateY(53vmin) translateZ(5vmin);
+                transform: translateX(-50%) translateX(28vmin) translateY(63vmin) translateZ(5vmin) rotateZ(90deg);
+            }
+
+            .pitch-control-base {
+                height: 15vmin;
             }
 
             .scene {
