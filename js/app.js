@@ -799,6 +799,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // ------------------------------------
     // ARM DRAG INTERACTION
     // ------------------------------------
+    // Constrain arm angle to playback arc limits
+    function constrainArmAngle(angle) {
+        const ARC_START_ANGLE = ARM_START_Z_ANGLE + 75; // -5°
+        const ARC_END_ANGLE = ARM_RUNOUT_GROOVE_ANGLE;  // 70°
+        return Math.max(ARC_START_ANGLE, Math.min(ARC_END_ANGLE, angle));
+    }
+
     function mouseToArmAngle(clientX, clientY) {
         // FIXED: Use stable pivot from turntable-base rather than rotating container
         const base = document.querySelector('.turntable-base');
@@ -833,7 +840,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
             const mouseAngle = mouseToArmAngle(clientX, clientY);
+            // FIX: Calculate offset based on current angle to prevent arm jumping
+            // The offset ensures the arm stays at the cursor position when grabbed
             armDragAngleOffset = armCurrentZAngle - mouseAngle;
+            // Set target angle to current position to prevent sudden movement
+            armTargetZAngle = armCurrentZAngle;
 
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
@@ -868,9 +879,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- PLAYBACK ARC CONSTRAINT ---
         // The arm must stay within the playback arc (from -5° to 70°)
         // This represents the actual playable area on the vinyl
-        const ARC_START_ANGLE = ARM_START_Z_ANGLE + 75; // -5°
-        const ARC_END_ANGLE = ARM_RUNOUT_GROOVE_ANGLE;  // 70°
-        newAngle = Math.max(ARC_START_ANGLE, Math.min(ARC_END_ANGLE, newAngle));
+        newAngle = constrainArmAngle(newAngle);
         // -------------------------------
 
         // Set target angle instead of direct angle for damping effect
@@ -949,6 +958,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Ensure current angle matches target (stop any residual movement)
+        // Constrain to arc limits to prevent arm from going beyond the debug arc end position
+        armTargetZAngle = constrainArmAngle(armTargetZAngle);
         armCurrentZAngle = armTargetZAngle;
         moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
 
