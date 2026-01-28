@@ -39,7 +39,7 @@
             font-weight: 900;
             letter-spacing: 2px;
             text-shadow: 2px 2px 6px rgba(255, 0, 0, 0.8),
-                         0 0 10px rgba(255, 0, 0, 0.5);
+                0 0 10px rgba(255, 0, 0, 0.5);
             background-color: #330000 !important;
             color: #ff0000;
             border: 2px solid #ff0000;
@@ -47,13 +47,16 @@
         }
 
         @keyframes pulse-horror {
-            0%, 100% {
+
+            0%,
+            100% {
                 text-shadow: 2px 2px 6px rgba(255, 0, 0, 0.8),
-                             0 0 10px rgba(255, 0, 0, 0.5);
+                    0 0 10px rgba(255, 0, 0, 0.5);
             }
+
             50% {
                 text-shadow: 2px 2px 8px rgba(255, 0, 0, 1),
-                             0 0 20px rgba(255, 0, 0, 0.8);
+                    0 0 20px rgba(255, 0, 0, 0.8);
             }
         }
 
@@ -68,9 +71,12 @@
         }
 
         @keyframes pulse-speed {
-            0%, 100% {
+
+            0%,
+            100% {
                 box-shadow: 0 0 8px rgba(192, 57, 43, 0.6);
             }
+
             50% {
                 box-shadow: 0 0 12px rgba(192, 57, 43, 0.9);
             }
@@ -1541,11 +1547,13 @@
             box-shadow: none;
             filter: drop-shadow(0.15vmin 0.15vmin 0.2vmin rgba(0, 0, 0, 0.6));
         }
-        
+
         /* Zone de hit invisible plus large pour mobile */
-        @media (max-width: 768px), (pointer: coarse) {
+        @media (max-width: 768px),
+        (pointer: coarse) {
             .tonearm-lift-hook {
-                padding: 2vmin;  /* Agrandit la zone cliquable sans changer l'apparence */
+                padding: 2vmin;
+                /* Agrandit la zone cliquable sans changer l'apparence */
             }
         }
 
@@ -1555,13 +1563,15 @@
             right: -0.5vmin;
             top: 50%;
             transform: translate(0%, -50%);
-            width: 8vmin;  /* Agrandie pour mobile */
-            height: 8vmin;
+            width: 15vmin;
+            /* Enlarged for easier grabbing */
+            height: 15vmin;
             background: rgba(52, 152, 219, 0.15);
             border: 0.2vmin solid rgba(52, 152, 219, 0.3);
             border-radius: 50%;
-            cursor: grab;
+            cursor: grab !important;
             pointer-events: auto;
+            touch-action: none;
             transition: all 0.3s ease;
             opacity: 0;
         }
@@ -1580,7 +1590,16 @@
         }
 
         .tonearm-drag-zone:active {
-            cursor: grabbing;
+            cursor: grabbing !important;
+        }
+
+        /* Make drag zone visible in debug mode */
+        .scene.debug .tonearm-drag-zone {
+            opacity: 0.5;
+        }
+
+        .scene.debug .tonearm-drag-zone:hover {
+            opacity: 1;
         }
 
         .tonearm-lift-hook:hover {
@@ -1739,7 +1758,7 @@
             transform: translate(-50%, -50%);
             animation: spin var(--speed-33-duration) linear infinite paused;
             transform-origin: center center;
-            cursor: grab;
+            cursor: url('../pointer.png') 16 16, grab;
             transition: box-shadow 0.2s ease;
         }
 
@@ -1748,7 +1767,7 @@
         }
 
         .vinyl-record.scratching {
-            cursor: grabbing;
+            cursor: url('../pointer.png') 16 16, grabbing;
             animation-play-state: paused !important;
         }
 

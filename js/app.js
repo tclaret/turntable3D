@@ -80,7 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let armDampingFrame = null;
     let lastArmDragAngle = null;
     let lastArmDragTime = null;
-    const ARM_DAMPING_FACTOR = 0.08; // Résistance: plus petit = plus de résistance
+    let cachedPivotX = null;
+    let cachedPivotY = null;
+    const ARM_DAMPING_FACTOR = 0.6; // Increased for much more responsive arm following
 
     // Audio & Scratch state
     const audioElement = new Audio('VanillaHaters.opus');
@@ -502,15 +504,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     cancelAnimationFrame(armDampingFrame);
                     armDampingFrame = null;
                 }
-                
+
                 // Preserve current arm position if it's already on the record and playing
                 // More strict check: must be in 'playing' state AND position must be valid (not at rest)
-                const preserveArmPosition = armState === 'playing' && 
-                                           currentArmPosition !== null && 
-                                           currentArmPosition !== ARM_REST_Z_ANGLE &&
-                                           armCurrentZAngle !== ARM_REST_Z_ANGLE;
+                const preserveArmPosition = armState === 'playing' &&
+                    currentArmPosition !== null &&
+                    currentArmPosition !== ARM_REST_Z_ANGLE &&
+                    armCurrentZAngle !== ARM_REST_Z_ANGLE;
                 const targetStartAngle = preserveArmPosition ? currentArmPosition : ARM_START_Z_ANGLE;
-                
+
                 // Reset arm state completely if starting from rest
                 if (!preserveArmPosition) {
                     isDraggingArm = false;
@@ -564,11 +566,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     armState = 'playing';
                     armCurrentHeight = ARM_HEIGHT_PLAYING;
                     armStartTime = 0;
-                    
+
                     // Set target to current position to prevent movement
                     armTargetZAngle = armCurrentZAngle;
                     currentArmPosition = armCurrentZAngle;
-                    
+
                     moveTonearmToPosition(armCurrentZAngle, ARM_HEIGHT_PLAYING);
                     if (animationFrameId) cancelAnimationFrame(animationFrameId);
                     animationFrameId = requestAnimationFrame(animateTonearm);
@@ -599,11 +601,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Stop animation
             vinyl.style.animation = 'none';
             vinyl.style.willChange = 'auto';
-            
+
             // Calculate target rotation: continue in the same direction to next clean position
             const normalizedRotation = ((scratchRotation % 360) + 360) % 360;
             let targetRotation;
-            
+
             if (isReversed) {
                 // Going backwards: round down to previous 0° position
                 targetRotation = Math.floor(scratchRotation / 360) * 360;
@@ -611,13 +613,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Going forward: round up to next 0° position
                 targetRotation = Math.ceil(scratchRotation / 360) * 360;
             }
-            
+
             // Apply smooth deceleration with CSS transition (simulate vinyl inertia)
             // Force a reflow to ensure transition applies
             void vinyl.offsetWidth;
             vinyl.style.transition = 'transform 6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
             vinyl.style.transform = `translate(-50%, -50%) rotateZ(${targetRotation}deg)`;
-            
+
             // Update internal state after transition
             setTimeout(() => {
                 scratchRotation = targetRotation;
@@ -748,7 +750,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elapsedTime < audioDuration) {
             const progress = elapsedTime / audioDuration;
             let currentArmZAngle = ARM_START_Z_ANGLE + totalAngleRange * progress;
-            
+
             // Limiter strictement le bras au run-out groove
             if (currentArmZAngle >= ARM_RUNOUT_GROOVE_ANGLE) {
                 currentArmZAngle = ARM_RUNOUT_GROOVE_ANGLE;
@@ -762,7 +764,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Le bras reste en place, ne pas continuer l'animation
                 return;
             }
-            
+
             currentArmPosition = currentArmZAngle;
             armCurrentZAngle = currentArmZAngle; // Update current angle for consistency
 
@@ -801,20 +803,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // ------------------------------------
     // Constrain arm angle to playback arc limits
     function constrainArmAngle(angle) {
-        const ARC_START_ANGLE = ARM_START_Z_ANGLE + 75; // -5°
-        const ARC_END_ANGLE = ARM_RUNOUT_GROOVE_ANGLE;  // 70°
+        const ARC_START_ANGLE = ARM_START_Z_ANGLE + 65; // -15° (more margin)
+        const ARC_END_ANGLE = ARM_RUNOUT_GROOVE_ANGLE + 10;  // 80° (more margin)
         return Math.max(ARC_START_ANGLE, Math.min(ARC_END_ANGLE, angle));
     }
 
-    function mouseToArmAngle(clientX, clientY) {
-        // FIXED: Use stable pivot from turntable-base rather than rotating container
-        const base = document.querySelector('.turntable-base');
-        const baseRect = base.getBoundingClientRect();
-        const vmin = Math.min(window.innerWidth, window.innerHeight) / 100;
+    function mouseToArmAngle(clientX, clientY, useCache = false) {
+        let pivotX, pivotY;
 
-        // Pivot location based on CSS: left: calc(50% + 30vmin), top: calc(50% - 10vmin)
-        const pivotX = baseRect.left + (baseRect.width / 2) + (30 * vmin);
-        const pivotY = baseRect.top + (baseRect.height / 2) - (10 * vmin);
+        if (useCache && cachedPivotX !== null && cachedPivotY !== null) {
+            pivotX = cachedPivotX;
+            pivotY = cachedPivotY;
+        } else {
+            // FIXED: Use stable pivot from turntable-base rather than rotating container
+            const base = document.querySelector('.turntable-base');
+            const baseRect = base.getBoundingClientRect();
+            const vmin = Math.min(window.innerWidth, window.innerHeight) / 100;
+
+            // Pivot location based on CSS: left: calc(50% + 30vmin), top: calc(50% - 10vmin)
+            pivotX = baseRect.left + (baseRect.width / 2) + (30 * vmin);
+            pivotY = baseRect.top + (baseRect.height / 2) - (10 * vmin);
+
+            // Update cache
+            cachedPivotX = pivotX;
+            cachedPivotY = pivotY;
+        }
 
         return Math.atan2(clientY - pivotY, clientX - pivotX) * (180 / Math.PI);
     }
@@ -825,7 +838,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             e.stopPropagation();
             isDraggingArm = true;
-            
+
             // Initialize scratch tracking
             lastArmDragAngle = armCurrentZAngle;
             lastArmDragTime = performance.now();
@@ -839,7 +852,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-            const mouseAngle = mouseToArmAngle(clientX, clientY);
+            // Force recalculation and caching of pivot on start
+            const mouseAngle = mouseToArmAngle(clientX, clientY, false);
             // FIX: Calculate offset based on current angle to prevent arm jumping
             // The offset ensures the arm stays at the cursor position when grabbed
             armDragAngleOffset = armCurrentZAngle - mouseAngle;
@@ -859,7 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tonearmLiftHook.addEventListener('mousedown', handleStart);
         tonearmLiftHook.addEventListener('touchstart', handleStart);
-        
+
         // Ajout des événements sur la zone de drag élargie
         if (tonearmDragZone) {
             tonearmDragZone.addEventListener('mousedown', handleStart);
@@ -870,10 +884,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleMove = (e) => {
         if (!isDraggingArm) return;
 
+        // Prevent arm movement if mouse is over interface controls
+        if (e.target.closest('.interface-controls')) return;
+
+        if (e.cancelable) e.preventDefault();
+        e.stopPropagation();
+
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-        const mouseAngle = mouseToArmAngle(clientX, clientY);
+        // Use cached pivot for movement to ensure stability
+        const mouseAngle = mouseToArmAngle(clientX, clientY, true);
         let newAngle = mouseAngle + armDragAngleOffset;
 
         // --- PLAYBACK ARC CONSTRAINT ---
@@ -919,7 +940,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update audio position based on arm movement (scratch effect)
         if (audioScratcher.isInitialized && isRunning) {
             const audioTime = getAudioPositionFromArmAngle(armCurrentZAngle);
-            
+
             // Calculate velocity based on angle change
             let velocity = 0;
             if (lastArmDragAngle !== null && lastArmDragTime !== null) {
@@ -932,10 +953,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     velocity = Math.max(-2, Math.min(2, velocity)); // Clamp
                 }
             }
-            
+
             lastArmDragAngle = armCurrentZAngle;
             lastArmDragTime = now;
-            
+
             audioScratcher.updatePosition(audioTime, velocity);
         }
 
@@ -946,8 +967,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mousemove', handleMove);
     document.addEventListener('touchmove', handleMove, { passive: false });
 
-    const handleEnd = () => {
+    const handleEnd = (e) => {
         if (!isDraggingArm) return;
+
+        if (e && e.cancelable) e.preventDefault();
+        if (e) e.stopPropagation();
+
         isDraggingArm = false;
         tonearmContainer.classList.remove('dragging');
 
@@ -956,7 +981,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cancelAnimationFrame(armDampingFrame);
             armDampingFrame = null;
         }
-        
+
         // Ensure current angle matches target (stop any residual movement)
         // Constrain to arc limits to prevent arm from going beyond the debug arc end position
         armTargetZAngle = constrainArmAngle(armTargetZAngle);
@@ -1029,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
             armCurrentZAngle = ARM_REST_Z_ANGLE;
             armCurrentHeight = ARM_HEIGHT_REST;
             moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
-            
+
             // Stop the turntable when arm returns to rest
             if (isRunning) {
                 setSpeedAndKnob(0, setStopBtn);
@@ -1167,21 +1192,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const armLiftLever = document.getElementById('arm-lift-lever');
     const armLiftContainer = document.querySelector('.arm-lift-control-container');
     const armLiftLabel = document.querySelector('.arm-lift-position-label');
-    
+
     if (armLiftLever && armLiftContainer) {
         armLiftLever.addEventListener('click', () => {
             // Toggle arm lift state
             isArmLifted = !isArmLifted;
-            
+
             // Visual feedback
             armLiftContainer.classList.add('active');
             setTimeout(() => armLiftContainer.classList.remove('active'), 500);
-            
+
             // Update label
             if (armLiftLabel) {
                 armLiftLabel.textContent = isArmLifted ? 'DOWN' : 'UP';
             }
-            
+
             // Move arm to lifted or playing position
             if (isArmLifted) {
                 armCurrentHeight = ARM_HEIGHT_LIFTED;
@@ -1256,7 +1281,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Prevent drag if interacting with controls or vinyl
         if (e.target.closest('.interface-controls') ||
             e.target.closest('.vinyl-record') ||
-            e.target.closest('.tonearm-lift-hook')) return;
+            e.target.closest('.tonearm-lift-hook') ||
+            e.target.closest('.tonearm-drag-zone') ||
+            isDraggingArm) return;
 
         isDraggingScene = true;
         previousMouseX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -1264,7 +1291,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const handleSceneMove = (e) => {
-        if (!isDraggingScene) return;
+        if (!isDraggingScene || isDraggingArm) return;
 
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -1324,51 +1351,51 @@ document.addEventListener('DOMContentLoaded', () => {
         // Center of the arc is at the center of the SVG viewBox
         const centerX = 100;
         const centerY = 100;
-        
+
         // Arm length is 28vmin, but reduced slightly for visual clarity
         // The SVG is 60vmin, so in the viewBox (200x200):
         // 26vmin / 60vmin * 200 = 86.67 units
         const radius = 87; // Slightly reduced from 93
-        
+
         // Arc should start at current needle position and end at run-out groove
         // Adjust to match the yellow crosshair position more precisely
         const adjustedStartAngle = ARM_START_Z_ANGLE + 75; // ~-5° - fine-tuned to align with crosshair
         const startAngle = (adjustedStartAngle + 90) * Math.PI / 180;
         const endAngle = (ARM_RUNOUT_GROOVE_ANGLE + 90) * Math.PI / 180;
-        
+
         const startX = centerX + radius * Math.cos(startAngle);
         const startY = centerY + radius * Math.sin(startAngle);
         const endX = centerX + radius * Math.cos(endAngle);
         const endY = centerY + radius * Math.sin(endAngle);
-        
+
         // Large arc flag: 1 if arc should be > 180°
         // Sweep flag: 1 for clockwise (mirror view)
         const largeArcFlag = (endAngle - startAngle) > Math.PI ? 1 : 0;
-        
+
         const pathData = `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
         arcPath.setAttribute('d', pathData);
-        
+
         // Draw angle markers
         if (markersGroup) {
             markersGroup.innerHTML = '';
-            
+
             // Draw markers every 15°
             const angleStep = 15;
             for (let angle = adjustedStartAngle; angle <= ARM_RUNOUT_GROOVE_ANGLE; angle += angleStep) {
                 const radians = (angle + 90) * Math.PI / 180;
-                
+
                 // Outer point (on arc)
                 const outerX = centerX + radius * Math.cos(radians);
                 const outerY = centerY + radius * Math.sin(radians);
-                
+
                 // Inner point (almost to center - very long tick mark)
                 const innerX = centerX + 5 * Math.cos(radians); // Just 5 units from center
                 const innerY = centerY + 5 * Math.sin(radians);
-                
+
                 // Text position (outside the arc)
                 const textX = centerX + (radius + 10) * Math.cos(radians);
                 const textY = centerY + (radius + 10) * Math.sin(radians);
-                
+
                 // Create tick line (from arc towards center)
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                 line.setAttribute('x1', outerX);
@@ -1378,7 +1405,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 line.setAttribute('stroke', 'rgba(255, 0, 255, 0.6)');
                 line.setAttribute('stroke-width', '1');
                 markersGroup.appendChild(line);
-                
+
                 // Create angle text
                 const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 text.setAttribute('x', textX);
