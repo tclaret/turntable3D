@@ -108,7 +108,7 @@
                 </div>
 
                 <div class="tonearm-rest"></div>
-                
+
                 <!-- Arm movement arc - fixed position showing the path (Debug) -->
                 <svg class="arm-arc-marker" viewBox="0 0 200 200">
                     <g class="arc-angle-markers"></g>
@@ -116,7 +116,10 @@
                     <text class="arm-arc-label arm-arc-start" x="155" y="135" font-size="7">Début</text>
                     <text class="arm-arc-label arm-arc-end" x="15" y="110" font-size="7">Fin</text>
                 </svg>
-                
+
+                <!-- Pivot Marker (Invisible guide for JS drag math) -->
+                <div class="tonearm-pivot-marker"></div>
+
                 <div id="tonearm-container" class="tonearm-container">
                     <div class="tonearm-gimbal-ring"></div>
                     <div class="tonearm-counterweight"></div>
@@ -174,7 +177,7 @@
                 <div class="angle-marker angle-marker-90" data-angle="90°"></div>
                 <div class="angle-marker angle-marker-180" data-angle="180°"></div>
                 <div class="angle-marker angle-marker-270" data-angle="270°"></div>
-                
+
                 <!-- Vinyl dimensions markers (Debug) -->
                 <div class="vinyl-marker" data-info="Vinyle (30cm)"></div>
                 <div class="label-marker" data-info="Étiquette (10cm)"></div>

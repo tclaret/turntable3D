@@ -1097,7 +1097,7 @@
             position: absolute;
             left: 50%;
             top: 1%;
-            transform: translateX(-50%) translateX(28vmin) translateY(50vmin) translateZ(5vmin) rotateZ(90deg);
+            transform: translateX(-50%) translateX(35vmin) translateY(45vmin) translateZ(5vmin) rotateZ(0deg);
             transform-style: preserve-3d;
             z-index: 10;
         }
@@ -1108,7 +1108,7 @@
             background-color: #333;
             border-radius: 1vmin;
             position: relative;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5) inset, 0 0 20px 5px rgba(255, 0, 0, 0.8);
+            box-shadow: 0 0.5vmin 1vmin rgba(0, 0, 0, 0.5) inset;
             border: 0.3vmin solid #555;
         }
 
@@ -1116,7 +1116,7 @@
             position: absolute;
             width: 15vmin;
             height: 15vmin;
-            background: radial-gradient(circle, rgba(192, 57, 43, 0.3) 0%, rgba(192, 57, 43, 0.1) 50%, transparent 100%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
             border-radius: 50%;
             top: 50%;
             left: 50%;
@@ -2245,4 +2245,20 @@
                 max-width: 500px;
                 max-height: 500px;
             }
-        }
+        }/* ------------------------------------ */
+/* PIVOT MARKER FOR JS DRAG MATH */
+/* ------------------------------------ */
+.tonearm-pivot-marker {
+    position: absolute;
+    /* Exactly matching the tonearm-container position */
+    left: calc(50% + 30vmin);
+    top: calc(50% - 10vmin);
+    /* Same Z height as the arm base to get correct 3D projection */
+    transform: translate(-50%, -50%) translateZ(7vmin);
+    transform-style: preserve-3d;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    /* visibility: hidden; -> Don't hide, or getBoundingClientRect might fail or return 0 */
+    opacity: 0;
+}

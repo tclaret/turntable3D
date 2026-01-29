@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastArmDragTime = null;
     let cachedPivotX = null;
     let cachedPivotY = null;
-    const ARM_DAMPING_FACTOR = 0.6; // Increased for much more responsive arm following
+    const ARM_DAMPING_FACTOR = 0.25; // Balanced: some weight, but follows pointer closer
 
     // Audio & Scratch state
     const audioElement = new Audio('VanillaHaters.opus');
@@ -166,6 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.isInitialized = false;
             this.duration = 0;
             this.wasPlaying = false;
+            this.loadingPromise = null;
         }
 
         async initialize() {
@@ -173,26 +174,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async loadFromAudioElement() {
-            try {
-                if (!toneInitialized) await initToneJS();
-                console.log('🎵 Loading audio with Tone.js...');
+            if (this.isInitialized) return true;
+            if (this.loadingPromise) return this.loadingPromise;
 
-                tonePlayer = new Tone.Player({
-                    url: this.audioElement.src,
-                    loop: false,
-                    onload: () => {
-                        this.isInitialized = true;
-                        this.duration = tonePlayer.buffer.duration;
-                        console.log('✅ Audio loaded:', this.duration, 's');
-                        tonePlayer.toDestination();
-                    }
-                });
-                await Tone.loaded();
-                return true;
-            } catch (error) {
-                console.error('❌ Error loading audio:', error);
-                return false;
-            }
+            this.loadingPromise = (async () => {
+                try {
+                    if (!toneInitialized) await initToneJS();
+                    console.log('🎵 Loading audio with Tone.js...');
+
+                    await new Promise((resolve, reject) => {
+                        tonePlayer = new Tone.Player({
+                            url: this.audioElement.src,
+                            loop: false,
+                            onload: () => {
+                                this.isInitialized = true;
+                                this.duration = tonePlayer.buffer.duration;
+                                console.log('✅ Audio loaded:', this.duration, 's');
+                                tonePlayer.toDestination();
+                                resolve();
+                            }
+                        });
+                    });
+
+                    await Tone.loaded();
+                    return true;
+                } catch (error) {
+                    console.error('❌ Error loading audio:', error);
+                    return false;
+                } finally {
+                    this.loadingPromise = null;
+                }
+            })();
+
+            return this.loadingPromise;
         }
 
         startScratch(currentPosition) {
@@ -264,6 +278,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (rpm === 0) return 1000;
         const duration = BASE_DURATION * (RPM_33 / rpm);
         return duration.toFixed(2);
+    }
+
+    // Helper to safely stop tone player avoiding 'start must be called before stop' errors
+    function safeStopTonePlayer() {
+        if (tonePlayer && tonePlayer.state === 'started') {
+            try {
+                tonePlayer.stop();
+            } catch (e) {
+                // Ignore errors if already stopped or race condition
+                // console.warn('Tone.js safe stop caught error:', e);
+            }
+        }
     }
 
     function updateAudioPlaybackRate() {
@@ -416,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentPos < 0 || isNaN(currentPos)) currentPos = 0;
             if (tonePlayer.buffer) currentPos = Math.min(currentPos, tonePlayer.buffer.duration - 0.05);
 
-            if (tonePlayer.state === 'started') tonePlayer.stop();
+            safeStopTonePlayer();
 
             tonePlayer.reverse = isReversed;
             updateAudioPlaybackRate(); // Sets rate correctly
@@ -433,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startAudioPlayback(startFromArmPosition = false) {
-        if (tonePlayer && tonePlayer.state === 'started') tonePlayer.stop();
+        safeStopTonePlayer();
 
         if (!audioScratcher.isInitialized) {
             audioScratcher.loadFromAudioElement().then(() => {
@@ -442,8 +468,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (startFromArmPosition && currentArmPosition !== null) {
                         startPos = getAudioPositionFromArmAngle(currentArmPosition);
                     }
-                    tonePlayer.start('+0', startPos);
-                    audioScratcher.setPosition(startPos);
+                    try {
+                        tonePlayer.start(Tone.now() + 0.1, startPos);
+                    } catch (e) {
+                        // Fallback
+                        tonePlayer.start('+0.1', startPos);
+                    }
+                    // Position is tracked internally by audioScratcher
                     updateAudioPlaybackRate();
                 }
             });
@@ -458,8 +489,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const duration = tonePlayer.buffer.duration;
             currentPos = Math.max(0, Math.min(currentPos, duration - 0.1));
 
-            tonePlayer.start('+0', currentPos);
-            audioScratcher.setPosition(currentPos);
+            try {
+                tonePlayer.start(Tone.now() + 0.1, currentPos);
+            } catch (e) {
+                tonePlayer.start('+0.1', currentPos);
+            }
+            // Position is tracked internally by audioScratcher
             updateAudioPlaybackRate();
         }
     }
@@ -517,6 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!preserveArmPosition) {
                     isDraggingArm = false;
                     armState = 'rest';
+                    tonearmContainer.style.transition = 'none'; // Disable transition for instant reset
 
                     // Tonearm sequence from rest position
                     // 1. Sound
@@ -560,6 +596,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         animationFrameId = requestAnimationFrame(animateTonearm);
                         startAudioPlayback(true); // Démarrer depuis la position du bras
                     }, 450);
+
+                    // Restore transition after sequence
+                    setTimeout(() => {
+                        tonearmContainer.style.transition = '';
+                    }, 500);
                 } else {
                     // Arm is already positioned on the record, just start playing from current position
                     isDraggingArm = false;
@@ -577,7 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     startAudioPlayback(true); // Démarrer depuis la position du bras
                 }
             } else {
-                if (tonePlayer && tonePlayer.state === 'started') tonePlayer.stop();
+                safeStopTonePlayer();
             }
 
         } else { // STOP
@@ -627,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 vinyl.style.transition = '';
             }, 6000);
 
-            if (tonePlayer && tonePlayer.state === 'started') tonePlayer.stop();
+            safeStopTonePlayer();
 
             currentArmPosition = null;
             if (animationFrameId) {
@@ -744,7 +785,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const elapsedTime = (timestamp - armStartTime) / 1000;
 
         // Utiliser la durée audio réelle au lieu d'une durée fixe
-        const audioDuration = audioScratcher.isInitialized ? audioScratcher.duration : ARM_TOTAL_PLAY_DURATION_SECONDS;
+        let audioDuration = audioScratcher.isInitialized ? audioScratcher.duration : ARM_TOTAL_PLAY_DURATION_SECONDS;
+        if (!audioDuration || audioDuration < 1) audioDuration = ARM_TOTAL_PLAY_DURATION_SECONDS;
+
         const totalAngleRange = ARM_RUNOUT_GROOVE_ANGLE - ARM_START_Z_ANGLE;
 
         if (elapsedTime < audioDuration) {
@@ -774,9 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Gérer l'audio selon la zone
             if (zone === 'label' || zone === 'off') {
                 // Pas de son dans l'étiquette ou hors disque
-                if (tonePlayer && tonePlayer.state === 'started') {
-                    tonePlayer.stop();
-                }
+                safeStopTonePlayer();
             } else if (zone === 'playing') {
                 // Zone de lecture normale - s'assurer que l'audio joue
                 if (isRunning && tonePlayer && tonePlayer.state !== 'started' && audioScratcher.isInitialized) {
@@ -790,9 +831,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Audio terminé, bras au dernier sillon
             armCurrentZAngle = ARM_RUNOUT_GROOVE_ANGLE;
             moveTonearmToPosition(ARM_RUNOUT_GROOVE_ANGLE, ARM_HEIGHT_PLAYING);
-            if (tonePlayer && tonePlayer.state === 'started') {
-                tonePlayer.stop();
-            }
+            moveTonearmToPosition(ARM_RUNOUT_GROOVE_ANGLE, ARM_HEIGHT_PLAYING);
+            safeStopTonePlayer();
             cancelAnimationFrame(animationFrameId);
             animationFrameId = null;
         }
@@ -802,9 +842,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // ARM DRAG INTERACTION
     // ------------------------------------
     // Constrain arm angle to playback arc limits
+    // Constrain arm angle to playback arc limits
     function constrainArmAngle(angle) {
-        const ARC_START_ANGLE = ARM_START_Z_ANGLE + 65; // -15° (more margin)
-        const ARC_END_ANGLE = ARM_RUNOUT_GROOVE_ANGLE + 10;  // 80° (more margin)
+        const ARC_START_ANGLE = ARM_START_Z_ANGLE - 5; // Allow dragging from start with margin
+        const ARC_END_ANGLE = 45; // User requested limit: shouldn't go far beyond 45°
         return Math.max(ARC_START_ANGLE, Math.min(ARC_END_ANGLE, angle));
     }
 
@@ -815,14 +856,20 @@ document.addEventListener('DOMContentLoaded', () => {
             pivotX = cachedPivotX;
             pivotY = cachedPivotY;
         } else {
-            // FIXED: Use stable pivot from turntable-base rather than rotating container
-            const base = document.querySelector('.turntable-base');
-            const baseRect = base.getBoundingClientRect();
-            const vmin = Math.min(window.innerWidth, window.innerHeight) / 100;
-
-            // Pivot location based on CSS: left: calc(50% + 30vmin), top: calc(50% - 10vmin)
-            pivotX = baseRect.left + (baseRect.width / 2) + (30 * vmin);
-            pivotY = baseRect.top + (baseRect.height / 2) - (10 * vmin);
+            // FIXED: Use the invisible 3D projected marker for exact pivot coordinates
+            const pivotMarker = document.querySelector('.tonearm-pivot-marker');
+            if (pivotMarker) {
+                const rect = pivotMarker.getBoundingClientRect();
+                pivotX = rect.left + rect.width / 2;
+                pivotY = rect.top + rect.height / 2;
+            } else {
+                // Fallback (should not happen if HTML is correct)
+                const base = document.querySelector('.turntable-base');
+                const baseRect = base.getBoundingClientRect();
+                const vmin = Math.min(window.innerWidth, window.innerHeight) / 100;
+                pivotX = baseRect.left + (baseRect.width / 2) + (30 * vmin);
+                pivotY = baseRect.top + (baseRect.height / 2) - (10 * vmin);
+            }
 
             // Update cache
             cachedPivotX = pivotX;
@@ -990,7 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Drop Logic
         if (isArmOverVinyl(armCurrentZAngle)) {
-            // Drop on record
+            // Drop on record - arm stays at release position
             isArmLifted = false;
             armCurrentHeight = ARM_HEIGHT_PLAYING;
             moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
@@ -1001,8 +1048,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Auto-start at 33 RPM when needle drops
             if (!isRunning) {
                 setSpeedAndKnob(RPM_33, set33Btn);
-            } else if (dropZone === 'playing') {
-                // Resume audio at position corresponding to arm angle
+            }
+
+            // Start audio at the current arm position
+            if (dropZone === 'playing') {
                 console.log('🎵 Needle drop - Starting audio at arm position');
                 startAudioPlayback(true);
             }
@@ -1014,39 +1063,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Animate from dropped position to run-out groove
-            const totalAngleRange = ARM_RUNOUT_GROOVE_ANGLE - ARM_START_Z_ANGLE;
-            const remainingAngleRange = ARM_RUNOUT_GROOVE_ANGLE - armCurrentZAngle;
-            const progressRatio = remainingAngleRange / totalAngleRange;
-
-            if (progressRatio > 0.01) {
-                armStartTime = 0;
-                currentArmPosition = armCurrentZAngle;
-
-                // Calculate remaining audio duration
-                const audioDuration = audioScratcher.isInitialized ? audioScratcher.duration : ARM_TOTAL_PLAY_DURATION_SECONDS;
-                const currentAudioPos = getAudioPositionFromArmAngle(armCurrentZAngle);
-                const remainingAudioDuration = audioDuration - currentAudioPos;
-
-                // Animation from current position
-                const animateFromCurrent = (timestamp) => {
-                    if (!armStartTime) armStartTime = timestamp;
-                    const elapsedTime = (timestamp - armStartTime) / 1000;
-
-                    if (elapsedTime < remainingAudioDuration) {
-                        const progress = elapsedTime / remainingAudioDuration;
-                        armCurrentZAngle = currentArmPosition + (ARM_RUNOUT_GROOVE_ANGLE - currentArmPosition) * progress;
-                        moveTonearmToPosition(armCurrentZAngle, ARM_HEIGHT_PLAYING);
-                        animationFrameId = requestAnimationFrame(animateFromCurrent);
-                    } else {
-                        moveTonearmToPosition(ARM_RUNOUT_GROOVE_ANGLE, ARM_HEIGHT_PLAYING);
-                        if (tonePlayer && tonePlayer.state === 'started') {
-                            tonePlayer.stop();
-                        }
-                    }
-                };
-                animationFrameId = requestAnimationFrame(animateFromCurrent);
-            }
+            // Le bras reste à la position de relâchement
+            // L'audio continuera de jouer et le bras suivra naturellement via la logique de playback
 
         } else {
             // Return to rest - trigger STOP state
@@ -1422,6 +1440,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     drawArmArc();
 
-    // Preload
-    audioScratcher.loadFromAudioElement();
+    // Preload - Disabled to prevent "AudioContext not allowed to start" warnings
+    // init is handled by user interaction (play button)
+    // audioScratcher.loadFromAudioElement();
 });
