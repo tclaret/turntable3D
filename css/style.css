@@ -1377,7 +1377,7 @@
             position: absolute;
             left: 50%;
             top: 3%;
-            transform: translateX(-50%) translateX(37vmin) translateY(50vmin) translateZ(6vmin);
+            transform: translateX(-50%) translateX(37vmin) translateY(-50vmin) translateZ(6vmin);
             transform-style: preserve-3d;
             width: 1.5vmin;
             height: 5vmin;
