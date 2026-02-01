@@ -55,8 +55,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Hauteurs Z (rotation X)
     const ARM_HEIGHT_REST = -8;
-    const ARM_HEIGHT_LIFTED = 5;  // Réduit pour rester visible
-    const ARM_HEIGHT_PLAYING = 3;
+    const ARM_HEIGHT_LIFTED = 5;  // Réduit pour rester visible (mouvement depuis repos)
+    const ARM_HEIGHT_DRAG_ON_DISC = 1;  // Très proche du disque lors du drag manuel
+    const ARM_HEIGHT_PLAYING = 0.5;
 
     // ------------------------------------
     // STATE VARIABLES
@@ -313,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Adjust Z position when lifted to keep arm visible
         const zPosition = targetHeight === ARM_HEIGHT_LIFTED ? 9 : 7;
         // Add rotateY for visual lift effect when arm is lifted
-        const rotateY = targetHeight === ARM_HEIGHT_LIFTED ? 8 : 0;
+        const rotateY = targetHeight === ARM_HEIGHT_LIFTED ? 8 : (targetHeight === ARM_HEIGHT_DRAG_ON_DISC ? 2 : 0);
         const transform = `translate(-50%, -50%) translateZ(${zPosition}vmin) rotateZ(${targetAngle}deg) rotateX(${targetHeight}deg) rotateY(${rotateY}deg)`;
 
         // Optim: use direct style manipulation
@@ -467,6 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let startPos = 0;
                     if (startFromArmPosition && currentArmPosition !== null) {
                         startPos = getAudioPositionFromArmAngle(currentArmPosition);
+                        console.log('🎯 (init) Starting audio from arm position:', currentArmPosition.toFixed(1), '° → audio time:', startPos.toFixed(2), 's');
                     }
                     try {
                         tonePlayer.start(Tone.now() + 0.1, startPos);
@@ -483,6 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (startFromArmPosition && currentArmPosition !== null) {
                 // Démarrer à la position correspondant à l'angle du bras
                 currentPos = getAudioPositionFromArmAngle(currentArmPosition);
+                console.log('🎯 Starting audio from arm position:', currentArmPosition.toFixed(1), '° → audio time:', currentPos.toFixed(2), 's / ', tonePlayer.buffer.duration.toFixed(2), 's');
             } else {
                 currentPos = audioScratcher.isInitialized ? audioScratcher.getPosition() : 0;
             }
@@ -913,7 +916,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             isArmLifted = true;
-            armCurrentHeight = ARM_HEIGHT_LIFTED;
+            // Si le bras est déjà sur le disque, utiliser une hauteur plus basse
+            armCurrentHeight = isArmOverVinyl(armCurrentZAngle) ? ARM_HEIGHT_DRAG_ON_DISC : ARM_HEIGHT_LIFTED;
             tonearmContainer.classList.add('dragging');
             moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
         };
@@ -952,6 +956,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Set target angle instead of direct angle for damping effect
         armTargetZAngle = newAngle;
+
+        // Ajuster la hauteur du bras en fonction de sa position
+        if (isArmOverVinyl(armCurrentZAngle)) {
+            armCurrentHeight = ARM_HEIGHT_DRAG_ON_DISC;
+        } else {
+            armCurrentHeight = ARM_HEIGHT_LIFTED;
+        }
 
         // Start damping animation if not already running
         if (!armDampingFrame) {
@@ -1040,6 +1051,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Drop on record - arm stays at release position
             isArmLifted = false;
             armCurrentHeight = ARM_HEIGHT_PLAYING;
+            
+            // IMPORTANT: Mettre à jour currentArmPosition AVANT de démarrer l'audio
+            currentArmPosition = armCurrentZAngle;
+            
             moveTonearmToPosition(armCurrentZAngle, armCurrentHeight);
 
             // Vérifier la zone où le bras est déposé
@@ -1052,8 +1067,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Start audio at the current arm position
             if (dropZone === 'playing') {
-                console.log('🎵 Needle drop - Starting audio at arm position');
+                const audioPos = getAudioPositionFromArmAngle(armCurrentZAngle);
+                console.log('🎵 Needle drop - Starting audio at arm position:', armCurrentZAngle.toFixed(1), '° → audio time:', audioPos.toFixed(2), 's');
+                
+                // Redémarrer l'animation du bras depuis la nouvelle position
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                
+                // Calculer le temps écoulé correspondant à cette position
+                const audioDuration = audioScratcher.isInitialized ? audioScratcher.duration : ARM_TOTAL_PLAY_DURATION_SECONDS;
+                const totalAngleRange = ARM_RUNOUT_GROOVE_ANGLE - ARM_START_Z_ANGLE;
+                const currentAngleOffset = armCurrentZAngle - ARM_START_Z_ANGLE;
+                const progress = Math.max(0, Math.min(1, currentAngleOffset / totalAngleRange));
+                const elapsedTimeForThisPosition = progress * audioDuration;
+                
+                // Réinitialiser le timestamp de départ pour correspondre à cette position
+                armStartTime = performance.now() - (elapsedTimeForThisPosition * 1000);
+                
+                // Démarrer l'audio et l'animation
                 startAudioPlayback(true);
+                animationFrameId = requestAnimationFrame(animateTonearm);
             }
 
             // Arrêter l'audio si déposé dans zone sans sillon
