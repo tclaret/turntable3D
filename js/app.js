@@ -771,6 +771,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const velocityNormalized = scratchVelocity / 6;
             audioScratcher.updatePosition(newTime, velocityNormalized);
 
+            // Réinitialiser l'ancre après chaque mise à jour pour éviter l'accumulation d'erreurs
+            // Cela garantit que la position audio reste synchronisée avec la rotation physique
+            anchorRotation = scratchRotation;
+            anchorAudioTime = newTime;
+
             // HTML Audio sync attempt (optional)
             if (Math.abs(audioElement.currentTime - newTime) > 0.1) {
                 audioElement.currentTime = newTime;
@@ -1188,7 +1193,9 @@ document.addEventListener('DOMContentLoaded', () => {
         vinyl.style.willChange = 'transform';
 
         scratchLastAngle = currentAngle;
-        lastMoveTime = Date.now();
+        lastScratchTime = currentTime;
+        lastMoveTime = currentTime;
+        
         // UI updates (indicator) excluded for brevity/cleanliness
     };
 
