@@ -956,7 +956,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- PLAYBACK ARC CONSTRAINT ---
         // The arm must stay within the playback arc (from -5° to 70°)
         // This represents the actual playable area on the vinyl
-        newAngle = constrainArmAngle(newAngle);
+        const constrainedAngle = constrainArmAngle(newAngle);
+        
+        // Si l'angle a été contraint (limité), réinitialiser l'offset
+        // pour empêcher le bras de "rebondir" vers la position initiale
+        if (constrainedAngle !== newAngle) {
+            armDragAngleOffset = constrainedAngle - mouseAngle;
+        }
+        
+        newAngle = constrainedAngle;
         // -------------------------------
 
         // Set target angle instead of direct angle for damping effect
